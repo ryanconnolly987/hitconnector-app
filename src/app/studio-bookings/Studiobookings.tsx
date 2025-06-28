@@ -1,17 +1,20 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { format, isAfter, isBefore, parseISO } from "date-fns"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { CalendarIcon, AlertTriangle, Eye, X } from "lucide-react"
+import { CalendarIcon, AlertTriangle, Eye, X, Loader2 } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/lib/auth"
+import { useToast } from "@/hooks/use-toast"
+import { API_BASE_URL } from "@/lib/config"
 
 // Define the booking type
 interface Booking {
@@ -22,84 +25,26 @@ interface Booking {
   startTime: string
   endTime: string
   room: string
-  status: "confirmed" | "pending" | "cancelled"
+  status: "confirmed" | "pending" | "cancelled" | "approved" | "rejected"
+  studioId?: string
+  userId?: string
+  userName?: string
+  userEmail?: string
+  duration?: number
+  totalCost?: number
+  message?: string
+  createdAt?: string
 }
 
 export default function StudioBookingsPage() {
-  // Mock bookings data
-  const allBookings: Booking[] = [
-    {
-      id: "1",
-      artistName: "Marcus Johnson",
-      artistImage: "/placeholder.svg?height=40&width=40",
-      date: "2025-05-15",
-      startTime: "14:00",
-      endTime: "17:00",
-      room: "Studio A",
-      status: "confirmed",
-    },
-    {
-      id: "2",
-      artistName: "Alicia Reynolds",
-      artistImage: "/placeholder.svg?height=40&width=40",
-      date: "2025-05-22",
-      startTime: "10:00",
-      endTime: "13:00",
-      room: "Studio B",
-      status: "pending",
-    },
-    {
-      id: "3",
-      artistName: "DJ Maximus",
-      artistImage: "/placeholder.svg?height=40&width=40",
-      date: "2025-05-28",
-      startTime: "18:00",
-      endTime: "22:00",
-      room: "Studio A",
-      status: "confirmed",
-    },
-    {
-      id: "4",
-      artistName: "Lyrical Genius",
-      artistImage: "/placeholder.svg?height=40&width=40",
-      date: "2025-06-04",
-      startTime: "15:00",
-      endTime: "18:00",
-      room: "Studio C",
-      status: "pending",
-    },
-    {
-      id: "5",
-      artistName: "Beat Master",
-      artistImage: "/placeholder.svg?height=40&width=40",
-      date: "2025-06-10",
-      startTime: "11:00",
-      endTime: "14:00",
-      room: "Studio B",
-      status: "confirmed",
-    },
-    {
-      id: "6",
-      artistName: "Vocal Queen",
-      artistImage: "/placeholder.svg?height=40&width=40",
-      date: "2025-04-28",
-      startTime: "13:00",
-      endTime: "16:00",
-      room: "Studio A",
-      status: "confirmed",
-    },
-    {
-      id: "7",
-      artistName: "Guitar Hero",
-      artistImage: "/placeholder.svg?height=40&width=40",
-      date: "2025-04-15",
-      startTime: "09:00",
-      endTime: "12:00",
-      room: "Studio C",
-      status: "cancelled",
-    },
-  ]
-
+  const { user } = useAuth()
+  const { toast } = useToast()
+  
+  // State for bookings data
+  const [allBookings, setAllBookings] = useState<Booking[]>([])
+  const [loading, setLoading] = useState(true)
+  const [studioId, setStudioId] = useState<string>("")
+  
   // State for filters
   const [dateRange, setDateRange] = useState<{
     from: Date | undefined
@@ -111,6 +56,121 @@ export default function StudioBookingsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [roomFilter, setRoomFilter] = useState<string>("all")
   const [activeTab, setActiveTab] = useState<string>("upcoming")
+
+  // Fetch bookings data
+  useEffect(() => {
+    const fetchBookings = async () => {
+      if (!user?.email && !user?.id) {
+        setLoading(false)
+        return
+      }
+      
+      try {
+        console.log('🔍 [Bookings] Fetching studio data and bookings for user:', { email: user.email, id: user.id })
+        
+        // First, find the studio owned by this user
+        const studiosResponse = await fetch(`${API_BASE_URL}/api/studios`)
+        if (!studiosResponse.ok) {
+          throw new Error('Failed to fetch studios')
+        }
+        
+        const studiosData = await studiosResponse.json()
+        const userStudios = studiosData.studios.filter((studio: any) => 
+          studio.owner === user.email || studio.owner === user.id
+        )
+        
+        if (userStudios.length > 0) {
+          const studio = userStudios[0]
+          const currentStudioId = studio.id || user.studioId
+          setStudioId(currentStudioId)
+          
+          console.log(`📋 [Bookings] Fetching booking data for studio: ${currentStudioId}`)
+          
+          // Fetch both booking requests and confirmed bookings
+          const [requestsResponse, bookingsResponse] = await Promise.all([
+            fetch(`${API_BASE_URL}/api/booking-requests?studioId=${currentStudioId}`),
+            fetch(`${API_BASE_URL}/api/bookings?studioId=${currentStudioId}`)
+          ])
+          
+          const allBookingsData: Booking[] = []
+          
+          // Process booking requests
+          if (requestsResponse.ok) {
+            const requestsData = await requestsResponse.json()
+            const validRequests = (requestsData.bookingRequests || []).filter((request: any) => request.id)
+            
+            // Convert booking requests to booking format
+            const formattedRequests = validRequests.map((request: any) => ({
+              id: request.id,
+              artistName: request.userName || request.userEmail || 'Unknown Artist',
+              artistImage: request.artistImage || "/placeholder.svg?height=40&width=40",
+              date: request.date,
+              startTime: request.startTime,
+              endTime: request.endTime,
+              room: request.room,
+              status: request.status || 'pending',
+              studioId: request.studioId,
+              userId: request.userId,
+              userName: request.userName,
+              userEmail: request.userEmail,
+              duration: request.duration,
+              totalCost: request.totalCost,
+              message: request.message,
+              createdAt: request.createdAt
+            }))
+            
+            allBookingsData.push(...formattedRequests)
+          }
+          
+          // Process confirmed bookings
+          if (bookingsResponse.ok) {
+            const bookingsData = await bookingsResponse.json()
+            const validBookings = (bookingsData.bookings || []).filter((booking: any) => booking.id)
+            
+            // Convert confirmed bookings to booking format
+            const formattedBookings = validBookings.map((booking: any) => ({
+              id: booking.id,
+              artistName: booking.userName || booking.userEmail || 'Unknown Artist',
+              artistImage: booking.artistImage || "/placeholder.svg?height=40&width=40",
+              date: booking.date,
+              startTime: booking.startTime,
+              endTime: booking.endTime,
+              room: booking.room,
+              status: 'confirmed',
+              studioId: booking.studioId,
+              userId: booking.userId,
+              userName: booking.userName,
+              userEmail: booking.userEmail,
+              duration: booking.duration,
+              totalCost: booking.totalCost,
+              message: booking.message,
+              createdAt: booking.createdAt
+            }))
+            
+            allBookingsData.push(...formattedBookings)
+          }
+          
+          console.log(`✅ [Bookings] Loaded ${allBookingsData.length} total bookings`)
+          setAllBookings(allBookingsData)
+        } else {
+          console.log('⚠️ [Bookings] No studio found for user')
+          setAllBookings([])
+        }
+      } catch (error) {
+        console.error('❌ [Bookings] Error fetching bookings:', error)
+        toast({
+          title: "Error Loading Bookings",
+          description: "Failed to load booking data. Please try again.",
+          variant: "destructive"
+        })
+        setAllBookings([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchBookings()
+  }, [user, toast])
 
   // Get initials for avatar fallback
   const getInitials = (name: string) => {
@@ -165,6 +225,22 @@ export default function StudioBookingsPage() {
   // Check if any filters are active
   const isFiltering =
     dateRange.from !== undefined || dateRange.to !== undefined || statusFilter !== "all" || roomFilter !== "all"
+
+  // Get unique rooms from bookings for filter dropdown
+  const uniqueRooms = [...new Set(allBookings.map(booking => booking.room).filter(Boolean))]
+
+  if (loading) {
+    return (
+      <div className="container max-w-7xl py-10">
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+            <p className="text-muted-foreground">Loading bookings...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="container max-w-7xl py-10">

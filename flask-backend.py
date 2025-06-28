@@ -1021,10 +1021,14 @@ def open_calls():
     elif request.method == 'POST':
         data = request.get_json() or {}
         
+        # Debug logging
+        print(f"DEBUG: Open Calls POST request data: {data}")
+        
         # Validate required fields
         required_fields = ['postedById', 'role', 'description']
         for field in required_fields:
             if not data.get(field):
+                print(f"DEBUG: Missing required field: {field}")
                 return jsonify({"error": f"Missing required field: {field}"}), 400
         
         # Generate unique ID
@@ -1034,17 +1038,24 @@ def open_calls():
         posted_by_id = data.get('postedById')
         posted_by_type = data.get('postedByType', 'user')
         
+        print(f"DEBUG: Looking for poster - ID: {posted_by_id}, Type: {posted_by_type}")
+        
         if posted_by_type == 'studio' and posted_by_id in studios_db:
             studio = studios_db[posted_by_id]
             posted_by_name = studio.get('name', 'Unknown Studio')
             posted_by_image = studio.get('profileImage', '/placeholder.svg?height=40&width=40')
             contact_email = studio.get('email', '')
+            print(f"DEBUG: Found studio: {posted_by_name}")
         elif posted_by_type == 'user' and posted_by_id in users_db:
             user = users_db[posted_by_id]
             posted_by_name = user.get('name', 'Unknown User')
             posted_by_image = user.get('profileImage', '/placeholder.svg?height=40&width=40')
             contact_email = user.get('email', '')
+            print(f"DEBUG: Found user: {posted_by_name}")
         else:
+            print(f"DEBUG: Invalid poster - ID {posted_by_id} not found in {posted_by_type}s")
+            print(f"DEBUG: Available studios: {list(studios_db.keys())}")
+            print(f"DEBUG: Available users: {list(users_db.keys())}")
             return jsonify({"error": "Invalid poster ID or type"}), 400
         
         # Create open call data

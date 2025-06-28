@@ -1,22 +1,16 @@
 "use client"
 
-import { useState } from "react"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { useState, useEffect } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Star, MessageSquare, CheckCircle2 } from "lucide-react"
-import { format } from "date-fns"
+import { Star, Filter, Calendar, CheckCircle, Loader2 } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useAuth } from "@/lib/auth"
+import { useToast } from "@/hooks/use-toast"
+import { API_BASE_URL } from "@/lib/config"
 
-// Define the review type
 interface Review {
   id: string
   artistName: string
@@ -25,89 +19,92 @@ interface Review {
   date: Date
   comment: string
   verifiedBooking: boolean
-  response?: string
 }
 
 export default function StudioReviewsPage() {
-  // Mock reviews data
-  const [reviews, setReviews] = useState<Review[]>([
-    {
-      id: "1",
-      artistName: "Marcus Johnson",
-      artistImage: "/placeholder.svg?height=40&width=40",
-      rating: 5,
-      date: new Date("2025-04-28"),
-      comment:
-        "Amazing studio with top-notch equipment. Michael was incredibly helpful and made the recording process smooth. The acoustics in Studio A are perfect for my band's sound. Will definitely be booking again soon!",
-      verifiedBooking: true,
-    },
-    {
-      id: "2",
-      artistName: "Alicia Reynolds",
-      artistImage: "/placeholder.svg?height=40&width=40",
-      rating: 5,
-      date: new Date("2025-04-15"),
-      comment:
-        "I've recorded at many studios in LA, and Soundwave is definitely one of the best. Great engineers, comfortable environment, and the equipment is all high quality. Sarah's mixing skills are exceptional.",
-      verifiedBooking: true,
-      response:
-        "Thank you for the kind words, Alicia! We loved working with you and can't wait to have you back for your next project.",
-    },
-    {
-      id: "3",
-      artistName: "DJ Maximus",
-      artistImage: "/placeholder.svg?height=40&width=40",
-      rating: 4,
-      date: new Date("2025-03-30"),
-      comment:
-        "Solid studio with a great vibe. Sarah's mixing skills are exceptional. Only reason for 4 stars is that parking can be a bit limited during peak hours, but the recording experience itself was fantastic.",
-      verifiedBooking: true,
-    },
-    {
-      id: "4",
-      artistName: "Lyrical Genius",
-      artistImage: "/placeholder.svg?height=40&width=40",
-      rating: 5,
-      date: new Date("2025-03-22"),
-      comment:
-        "The studio exceeded my expectations. The sound isolation is incredible, and the staff was professional and accommodating. I was able to record my entire EP in just two sessions. Highly recommend!",
-      verifiedBooking: true,
-    },
-    {
-      id: "5",
-      artistName: "Beat Master",
-      artistImage: "/placeholder.svg?height=40&width=40",
-      rating: 3,
-      date: new Date("2025-03-15"),
-      comment:
-        "Good equipment and knowledgeable staff, but the session felt a bit rushed. Would have appreciated more time to get the perfect sound. The mixing was excellent though.",
-      verifiedBooking: false,
-    },
-    {
-      id: "6",
-      artistName: "Vocal Queen",
-      artistImage: "/placeholder.svg?height=40&width=40",
-      rating: 5,
-      date: new Date("2025-03-10"),
-      comment:
-        "As a vocalist, I'm very particular about the microphones and acoustics. This studio had everything I needed and more. The vocal booth was spacious and the engineer knew exactly how to capture my voice. Perfect experience!",
-      verifiedBooking: true,
-    },
-    {
-      id: "7",
-      artistName: "Guitar Hero",
-      artistImage: "/placeholder.svg?height=40&width=40",
-      rating: 4,
-      date: new Date("2025-03-05"),
-      comment:
-        "Great selection of amps and guitars. The engineer had a good ear for guitar tones and helped me dial in the perfect sound. Would definitely come back for my next recording.",
-      verifiedBooking: true,
-    },
-  ])
+  const { user } = useAuth()
+  const { toast } = useToast()
+  
+  // State for reviews data
+  const [reviews, setReviews] = useState<Review[]>([])
+  const [loading, setLoading] = useState(true)
+  const [studioId, setStudioId] = useState<string>("")
 
   // State for filters
   const [sortBy, setSortBy] = useState<string>("recent")
   const [filterRating, setFilterRating] = useState<string>("all")
+
+  // Fetch reviews data
+  useEffect(() => {
+    const fetchReviews = async () => {
+      if (!user?.email && !user?.id) {
+        setLoading(false)
+        return
+      }
+      
+      try {
+        console.log('🔍 [Reviews] Fetching studio data and reviews for user:', { email: user.email, id: user.id })
+        
+        // First, find the studio owned by this user
+        const studiosResponse = await fetch(`${API_BASE_URL}/api/studios`)
+        if (!studiosResponse.ok) {
+          throw new Error('Failed to fetch studios')
+        }
+        
+        const studiosData = await studiosResponse.json()
+        const userStudios = studiosData.studios.filter((studio: any) => 
+          studio.owner === user.email || studio.owner === user.id
+        )
+        
+        if (userStudios.length > 0) {
+          const studio = userStudios[0]
+          const currentStudioId = studio.id || user.studioId
+          setStudioId(currentStudioId)
+          
+          console.log(`⭐ [Reviews] Fetching reviews for studio: ${currentStudioId}`)
+          
+          // Fetch reviews for this studio
+          const reviewsResponse = await fetch(`${API_BASE_URL}/api/reviews?studioId=${currentStudioId}`)
+          if (reviewsResponse.ok) {
+            const reviewsData = await reviewsResponse.json()
+            const validReviews = (reviewsData.reviews || []).filter((review: any) => review.id)
+            
+            // Convert API reviews to component format
+            const formattedReviews = validReviews.map((review: any) => ({
+              id: review.id,
+              artistName: review.artistName || review.userName || 'Anonymous',
+              artistImage: review.artistImage || "/placeholder.svg?height=40&width=40",
+              rating: review.rating || 0,
+              date: new Date(review.createdAt || review.date || Date.now()),
+              comment: review.comment || review.review || '',
+              verifiedBooking: review.verifiedBooking || false
+            }))
+            
+            console.log(`✅ [Reviews] Loaded ${formattedReviews.length} reviews`)
+            setReviews(formattedReviews)
+          } else {
+            console.log(`❌ [Reviews] Failed to fetch reviews`)
+            setReviews([])
+          }
+        } else {
+          console.log('⚠️ [Reviews] No studio found for user')
+          setReviews([])
+        }
+      } catch (error) {
+        console.error('❌ [Reviews] Error fetching reviews:', error)
+        toast({
+          title: "Error Loading Reviews",
+          description: "Failed to load review data. Please try again.",
+          variant: "destructive"
+        })
+        setReviews([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchReviews()
+  }, [user, toast])
 
   // Get initials for avatar fallback
   const getInitials = (name: string) => {
@@ -119,24 +116,53 @@ export default function StudioReviewsPage() {
   }
 
   // Filter and sort reviews
-  const filteredAndSortedReviews = [...reviews]
+  const filteredAndSortedReviews = reviews
     .filter((review) => {
       if (filterRating === "all") return true
-      return review.rating === Number.parseInt(filterRating, 10)
+      const rating = parseInt(filterRating)
+      return review.rating === rating
     })
     .sort((a, b) => {
-      if (sortBy === "recent") {
-        return b.date.getTime() - a.date.getTime()
-      } else if (sortBy === "highest") {
-        return b.rating - a.rating || b.date.getTime() - a.date.getTime()
-      } else if (sortBy === "lowest") {
-        return a.rating - b.rating || b.date.getTime() - a.date.getTime()
+      switch (sortBy) {
+        case "recent":
+          return b.date.getTime() - a.date.getTime()
+        case "oldest":
+          return a.date.getTime() - b.date.getTime()
+        case "highest":
+          return b.rating - a.rating
+        case "lowest":
+          return a.rating - b.rating
+        default:
+          return 0
       }
-      return 0
     })
 
   // Calculate average rating
-  const averageRating = reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length || 0
+  const averageRating = reviews.length > 0 
+    ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length 
+    : 0
+
+  // Count reviews by rating
+  const ratingCounts = [5, 4, 3, 2, 1].map(rating => ({
+    rating,
+    count: reviews.filter(review => review.rating === rating).length,
+    percentage: reviews.length > 0 
+      ? (reviews.filter(review => review.rating === rating).length / reviews.length) * 100 
+      : 0
+  }))
+
+  if (loading) {
+    return (
+      <div className="container max-w-4xl py-10">
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+            <p className="text-muted-foreground">Loading reviews...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="container max-w-5xl py-10">
@@ -166,12 +192,10 @@ export default function StudioReviewsPage() {
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
             <SelectContent>
-              <SelectGroup>
-                <SelectLabel>Sort by</SelectLabel>
-                <SelectItem value="recent">Most Recent</SelectItem>
-                <SelectItem value="highest">Highest Rated</SelectItem>
-                <SelectItem value="lowest">Lowest Rated</SelectItem>
-              </SelectGroup>
+              <SelectItem value="recent">Most Recent</SelectItem>
+              <SelectItem value="oldest">Oldest</SelectItem>
+              <SelectItem value="highest">Highest Rated</SelectItem>
+              <SelectItem value="lowest">Lowest Rated</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -181,15 +205,12 @@ export default function StudioReviewsPage() {
               <SelectValue placeholder="Filter by rating" />
             </SelectTrigger>
             <SelectContent>
-              <SelectGroup>
-                <SelectLabel>Filter by rating</SelectLabel>
-                <SelectItem value="all">All Ratings</SelectItem>
-                <SelectItem value="5">5 Stars</SelectItem>
-                <SelectItem value="4">4 Stars</SelectItem>
-                <SelectItem value="3">3 Stars</SelectItem>
-                <SelectItem value="2">2 Stars</SelectItem>
-                <SelectItem value="1">1 Star</SelectItem>
-              </SelectGroup>
+              <SelectItem value="all">All Ratings</SelectItem>
+              <SelectItem value="5">5 Stars</SelectItem>
+              <SelectItem value="4">4 Stars</SelectItem>
+              <SelectItem value="3">3 Stars</SelectItem>
+              <SelectItem value="2">2 Stars</SelectItem>
+              <SelectItem value="1">1 Star</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -209,7 +230,7 @@ export default function StudioReviewsPage() {
                     </Avatar>
                     <div>
                       <div className="font-medium">{review.artistName}</div>
-                      <div className="text-sm text-muted-foreground">{format(review.date, "MMMM d, yyyy")}</div>
+                      <div className="text-sm text-muted-foreground">{review.date.toLocaleDateString()}</div>
                       <div className="flex items-center mt-1">
                         {[1, 2, 3, 4, 5].map((star) => (
                           <Star
@@ -221,7 +242,7 @@ export default function StudioReviewsPage() {
                         ))}
                         {review.verifiedBooking && (
                           <Badge variant="secondary" className="ml-2 flex items-center gap-1">
-                            <CheckCircle2 className="h-3 w-3" />
+                            <CheckCircle className="h-3 w-3" />
                             <span>Verified Booking</span>
                           </Badge>
                         )}
@@ -232,27 +253,6 @@ export default function StudioReviewsPage() {
               </CardHeader>
               <CardContent className="pt-4">
                 <p className="text-sm">{review.comment}</p>
-
-                {review.response && (
-                  <div className="mt-4 pt-4 border-t">
-                    <div className="flex items-start gap-3">
-                      <div className="bg-primary/10 p-2 rounded-full">
-                        <MessageSquare className="h-4 w-4 text-primary" />
-                      </div>
-                      <div>
-                        <div className="font-medium text-sm">Studio Response</div>
-                        <p className="text-sm mt-1">{review.response}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {!review.response && (
-                  <button className="text-sm text-primary hover:underline mt-4 flex items-center gap-1">
-                    <MessageSquare className="h-3 w-3" />
-                    <span>Reply to this review</span>
-                  </button>
-                )}
               </CardContent>
             </Card>
           ))

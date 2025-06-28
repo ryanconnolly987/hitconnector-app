@@ -1,102 +1,99 @@
-'use client'
+"use client"
 
 import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { Search, Star, MapPin, Clock, Wifi, Mic, Headphones, Monitor } from "lucide-react"
+import { Star, Search, Wifi, Mic, Monitor, Headphones, MapPin } from "lucide-react"
+import { API_BASE_URL } from "@/lib/config"
 
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
 interface Studio {
   id: string
   name: string
-  city: string
-  state: string
+  location: string
+  address?: string
+  phone?: string
+  email?: string
+  website?: string
+  profileImage?: string
+  coverImage?: string
+  hourlyRate: number
+  specialties?: string[]
   rating: number
   reviewCount: number
-  pricePerHour: number
-  image: string
-  amenities: string[]
   description: string
-  isAvailable: boolean
+  amenities?: string[]
+  owner?: string
+  images?: string[]
+  gallery?: string[]
+  availability?: any
+  equipment?: string[]
+  trackUrl?: string
+  followers?: string[]
+  rooms?: any[]
+  staff?: any[]
 }
-
-// Mock data - in real app this would come from the backend API
-const mockStudios: Studio[] = [
-  {
-    id: "1",
-    name: "Soundwave Studios",
-    city: "Los Angeles",
-    state: "CA",
-    rating: 4.9,
-    reviewCount: 127,
-    pricePerHour: 75,
-    image: "/placeholder.svg?height=300&width=400",
-    amenities: ["WiFi", "Recording Equipment", "Mixing Board", "Monitors"],
-    description: "Professional recording studio with state-of-the-art equipment and experienced engineers.",
-    isAvailable: true
-  },
-  {
-    id: "2",
-    name: "Beat Factory",
-    city: "Atlanta",
-    state: "GA",
-    rating: 4.8,
-    reviewCount: 95,
-    pricePerHour: 65,
-    image: "/placeholder.svg?height=300&width=400",
-    amenities: ["WiFi", "Mixing Board", "Vocal Booth", "Instruments"],
-    description: "Hip-hop focused studio with industry-standard equipment and platinum record history.",
-    isAvailable: true
-  },
-  {
-    id: "3",
-    name: "Rhythm House",
-    city: "New York",
-    state: "NY",
-    rating: 4.7,
-    reviewCount: 203,
-    pricePerHour: 85,
-    image: "/placeholder.svg?height=300&width=400",
-    amenities: ["WiFi", "Recording Equipment", "Mixing Board", "Mastering Suite"],
-    description: "Premium recording facility in the heart of NYC with Grammy-winning engineers.",
-    isAvailable: false
-  },
-  {
-    id: "4",
-    name: "Flow Records",
-    city: "Miami",
-    state: "FL",
-    rating: 4.6,
-    reviewCount: 78,
-    pricePerHour: 70,
-    image: "/placeholder.svg?height=300&width=400",
-    amenities: ["WiFi", "Vocal Booth", "Mixing Board", "Lounge Area"],
-    description: "Modern studio with tropical vibes and cutting-edge technology.",
-    isAvailable: true
-  }
-]
 
 const amenityIcons: { [key: string]: any } = {
   "WiFi": Wifi,
-  "Recording Equipment": Mic,
+  "24/7 Access": Monitor,
+  "Parking": MapPin,
   "Mixing Board": Monitor,
+  "Instruments": Mic,
+  "Coffee": Monitor,
+  "Recording Equipment": Mic,
   "Monitors": Headphones,
   "Vocal Booth": Mic,
   "Mastering Suite": Monitor,
-  "Instruments": Mic,
   "Lounge Area": Monitor
 }
 
 function StudiosPageContent() {
   const searchParams = useSearchParams()
   const [searchQuery, setSearchQuery] = useState("")
-  const [studios, setStudios] = useState<Studio[]>(mockStudios)
-  const [loading, setLoading] = useState(false)
+  const [studios, setStudios] = useState<Studio[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searching, setSearching] = useState(false)
+
+  // Fetch studios from API
+  useEffect(() => {
+    const fetchStudios = async () => {
+      try {
+        console.log('🔍 [Studios] Fetching studios from API')
+        
+        const response = await fetch(`${API_BASE_URL}/api/studios`)
+        if (response.ok) {
+          const data = await response.json()
+          console.log('✅ [Studios] Studios fetched:', data.studios?.length || 0)
+          
+          const validStudios = (data.studios || []).filter((studio: any) => {
+            if (!studio.id) {
+              console.warn('⚠️ [Studios] Found studio without ID:', studio)
+              return false
+            }
+            return true
+          })
+          
+          setStudios(validStudios)
+        } else {
+          console.error('❌ [Studios] Failed to fetch studios')
+          setStudios([])
+        }
+      } catch (error) {
+        console.error('Error fetching studios:', error)
+        setStudios([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStudios()
+  }, [])
 
   useEffect(() => {
     // Get search parameters from URL
@@ -105,37 +102,83 @@ function StudiosPageContent() {
     
     if (location) {
       setSearchQuery(location)
-      handleSearch(location)
     } else if (search) {
       setSearchQuery(search)
-      handleSearch(search)
     }
   }, [searchParams])
 
   const handleSearch = (query?: string) => {
     const searchTerm = query || searchQuery
-    setLoading(true)
+    setSearching(true)
     
-    // Simulate API call
+    // Filter studios based on search term
     setTimeout(() => {
       if (searchTerm.trim()) {
-        const filtered = mockStudios.filter(studio => 
+        const filtered = studios.filter(studio => 
           studio.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          studio.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          studio.state.toLowerCase().includes(searchTerm.toLowerCase())
+          studio.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          studio.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (studio.specialties && studio.specialties.some(specialty => 
+            specialty.toLowerCase().includes(searchTerm.toLowerCase())
+          ))
         )
         setStudios(filtered)
       } else {
-        setStudios(mockStudios)
+        // Re-fetch all studios if search is cleared
+        fetchStudios()
       }
-      setLoading(false)
-    }, 500)
+      setSearching(false)
+    }, 300)
+  }
+
+  const fetchStudios = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/studios`)
+      if (response.ok) {
+        const data = await response.json()
+        const validStudios = (data.studios || []).filter((studio: any) => studio.id)
+        setStudios(validStudios)
+      }
+    } catch (error) {
+      console.error('Error fetching studios:', error)
+    }
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleSearch()
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <header className="sticky top-0 z-10 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="container flex h-16 items-center justify-between">
+            <Link href="/" className="flex items-center gap-2">
+              <span className="text-xl font-bold">HitConnector</span>
+            </Link>
+            <nav className="hidden md:flex gap-6">
+              <Link href="/how-it-works" className="text-sm font-medium hover:underline underline-offset-4">
+                How It Works
+              </Link>
+              <Link href="/login" className="text-sm font-medium hover:underline underline-offset-4">
+                Log In
+              </Link>
+              <Button asChild size="sm">
+                <Link href="/signup">Sign Up</Link>
+              </Button>
+            </nav>
+          </div>
+        </header>
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading studios...</p>
+          </div>
+        </main>
+      </div>
+    )
   }
 
   return (
@@ -169,15 +212,15 @@ function StudiosPageContent() {
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="text"
-                    placeholder="Search by city, state, or studio name..."
+                    placeholder="Search by city, name, or genre..."
                     className="pl-8"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyPress={handleKeyPress}
                   />
                 </div>
-                <Button onClick={() => handleSearch()} disabled={loading}>
-                  {loading ? "Searching..." : "Search"}
+                <Button onClick={() => handleSearch()} disabled={searching}>
+                  {searching ? "Searching..." : "Search"}
                 </Button>
               </div>
             </div>
@@ -212,86 +255,102 @@ function StudiosPageContent() {
 }
 
 function StudioCard({ studio }: { studio: Studio }) {
+  const getLocationDisplay = (location: string) => {
+    // If location already contains city/state format, use it
+    if (location.includes(',')) {
+      return location
+    }
+    // Otherwise, assume it's a city and add a generic state
+    return location
+  }
+
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       <div className="aspect-video relative">
         <Image 
-          src={studio.image} 
-          alt={studio.name} 
-          fill 
-          className="object-cover" 
+          src={studio.profileImage || studio.coverImage || "/placeholder.svg?height=300&width=400"} 
+          alt={studio.name}
+          fill
+          className="object-cover"
         />
-        {!studio.isAvailable && (
-          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-            <Badge variant="destructive">Currently Unavailable</Badge>
+        {!studio.hourlyRate && (
+          <div className="absolute top-2 left-2">
+            <Badge variant="secondary">Contact for Pricing</Badge>
           </div>
         )}
       </div>
-      
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-start">
-          <div>
-            <h3 className="font-semibold text-lg">{studio.name}</h3>
-            <div className="flex items-center text-sm text-muted-foreground mt-1">
-              <MapPin className="h-3 w-3 mr-1" />
-              {studio.city}, {studio.state}
+      <CardContent className="p-4">
+        <div className="space-y-2">
+          <div className="flex items-start justify-between">
+            <h3 className="font-semibold text-lg leading-none">{studio.name}</h3>
+            <div className="flex items-center gap-1">
+              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+              <span className="text-sm font-medium">{studio.rating}</span>
+              <span className="text-sm text-muted-foreground">({studio.reviewCount})</span>
             </div>
           </div>
-          <div className="flex items-center">
-            <Star className="h-4 w-4 fill-current text-yellow-500" />
-            <span className="ml-1 text-sm font-medium">{studio.rating}</span>
-            <span className="text-xs text-muted-foreground ml-1">
-              ({studio.reviewCount})
-            </span>
+          
+          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+            <MapPin className="h-4 w-4" />
+            <span>{getLocationDisplay(studio.location)}</span>
+          </div>
+          
+          <p className="text-sm text-muted-foreground line-clamp-2">
+            {studio.description}
+          </p>
+          
+          {studio.specialties && studio.specialties.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {studio.specialties.slice(0, 3).map((specialty) => (
+                <Badge key={specialty} variant="outline" className="text-xs">
+                  {specialty}
+                </Badge>
+              ))}
+              {studio.specialties.length > 3 && (
+                <Badge variant="outline" className="text-xs">
+                  +{studio.specialties.length - 3} more
+                </Badge>
+              )}
+            </div>
+          )}
+          
+          {studio.amenities && studio.amenities.length > 0 && (
+            <div className="flex gap-2 pt-2">
+              {studio.amenities.slice(0, 4).map((amenity) => {
+                const IconComponent = amenityIcons[amenity] || Monitor
+                return (
+                  <div key={amenity} className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <IconComponent className="h-3 w-3" />
+                    <span className="hidden sm:inline">{amenity}</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+          
+          <div className="flex items-center justify-between pt-2">
+            <div className="text-lg font-semibold">
+              {studio.hourlyRate ? `$${studio.hourlyRate}/hr` : 'Contact for pricing'}
+            </div>
+            <Button asChild size="sm">
+              <Link href={`/studio-profile?id=${studio.id}`}>
+                View Studio
+              </Link>
+            </Button>
           </div>
         </div>
-      </CardHeader>
-
-      <CardContent className="space-y-3">
-        <p className="text-sm text-muted-foreground line-clamp-2">
-          {studio.description}
-        </p>
-        
-        <div className="flex flex-wrap gap-1">
-          {studio.amenities.slice(0, 3).map((amenity) => {
-            const Icon = amenityIcons[amenity] || Clock
-            return (
-              <Badge key={amenity} variant="secondary" className="text-xs">
-                <Icon className="h-3 w-3 mr-1" />
-                {amenity}
-              </Badge>
-            )
-          })}
-          {studio.amenities.length > 3 && (
-            <Badge variant="outline" className="text-xs">
-              +{studio.amenities.length - 3} more
-            </Badge>
-          )}
-        </div>
       </CardContent>
-
-      <CardFooter className="flex justify-between items-center">
-        <div>
-          <span className="text-lg font-bold">${studio.pricePerHour}</span>
-          <span className="text-sm text-muted-foreground"> / hour</span>
-        </div>
-        <Button 
-          asChild 
-          disabled={!studio.isAvailable}
-          variant={studio.isAvailable ? "default" : "secondary"}
-        >
-          <Link href={`/studios/${studio.id}`}>
-            {studio.isAvailable ? "Book Now" : "View Details"}
-          </Link>
-        </Button>
-      </CardFooter>
     </Card>
   )
 }
 
 export default function StudiosPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    }>
       <StudiosPageContent />
     </Suspense>
   )

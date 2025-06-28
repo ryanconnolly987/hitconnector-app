@@ -515,13 +515,13 @@ function StudioProfileContent() {
   }
 
   const handleRoomSubmit = () => {
-    if (isEditingRoom && currentRoom.name && currentRoom.hourlyRate) {
+    if (currentRoom.name && currentRoom.hourlyRate) {
       const newRoom = {
         ...currentRoom,
         id: currentRoom.id || `room-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`
       }
       
-      if (currentRoom.id && rooms.find(r => r.id === currentRoom.id)) {
+      if (isEditingRoom && currentRoom.id && rooms.find(r => r.id === currentRoom.id)) {
         // Update existing room
         setRooms(prev => prev.map(room =>
           room.id === currentRoom.id ? newRoom : room
@@ -548,8 +548,14 @@ function StudioProfileContent() {
       
       toast({
         title: "Success",
-        description: currentRoom.id ? "Room updated successfully" : "Room added successfully",
+        description: isEditingRoom ? "Room updated successfully" : "Room added successfully",
         variant: "default"
+      })
+    } else {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in the room name and hourly rate.",
+        variant: "destructive"
       })
     }
   }
@@ -606,13 +612,13 @@ function StudioProfileContent() {
   }
 
   const handleStaffSubmit = () => {
-    if (isEditingStaff && currentStaff.name && currentStaff.role) {
+    if (currentStaff.name && currentStaff.role) {
       const newStaff = {
         ...currentStaff,
         id: currentStaff.id || `staff-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`
       }
       
-      if (currentStaff.id && staffMembers.find(s => s.id === currentStaff.id)) {
+      if (isEditingStaff && currentStaff.id && staffMembers.find(s => s.id === currentStaff.id)) {
         // Update existing staff
         setStaffMembers(prev => prev.map(staff =>
           staff.id === currentStaff.id ? newStaff : staff
@@ -639,8 +645,14 @@ function StudioProfileContent() {
       
       toast({
         title: "Success",
-        description: currentStaff.id ? "Staff member updated successfully" : "Staff member added successfully",
+        description: isEditingStaff ? "Staff member updated successfully" : "Staff member added successfully",
         variant: "default"
+      })
+    } else {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in the staff member's name and role.",
+        variant: "destructive"
       })
     }
   }

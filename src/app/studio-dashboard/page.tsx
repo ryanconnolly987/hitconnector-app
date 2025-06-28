@@ -1,13 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import Link from "next/link"
 import { format, addDays, startOfWeek, eachDayOfInterval } from "date-fns"
 import {
   CalendarDays,
   Clock,
   Settings,
-  Upload,
   DollarSign,
   Users,
   Star,
@@ -18,12 +17,13 @@ import {
   LayoutDashboard,
   BookOpen,
   Heart,
-  Megaphone,
+  Megaphone
 } from "lucide-react"
 import { useAuth } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
 import { useFollow } from "@/hooks/use-follow"
 import { API_BASE_URL } from "@/lib/config"
+import OpenCallsTab from "@/components/open-calls-tab"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -42,6 +42,10 @@ import {
 } from "@/components/ui/sidebar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
 export default function StudioDashboardPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -57,6 +61,7 @@ export default function StudioDashboardPage() {
     reviewCount: 0,
     profileImage: ""
   })
+  
   const { user } = useAuth()
   const { toast } = useToast()
   
@@ -127,16 +132,22 @@ export default function StudioDashboardPage() {
               const requestsData = await requestsResponse.json()
               console.log(`✅ [Dashboard] Found ${requestsData.bookingRequests?.length || 0} booking requests`)
               
-              // Validate and filter booking requests
+              // Validate and filter booking requests - only show pending ones
               const validRequests = (requestsData.bookingRequests || []).filter((request: any) => {
                 if (!request.id) {
                   console.warn('⚠️ [Dashboard] Found booking request without ID:', request)
                   return false
                 }
+                // Only show pending requests to prevent repeat acceptance
+                // Filter out approved, rejected, and confirmed requests
+                if (request.status && request.status !== 'pending') {
+                  console.log(`🔍 [Dashboard] Filtering out non-pending request (${request.status}):`, request.id)
+                  return false
+                }
                 return true
               })
               
-              console.log(`🔍 [Dashboard] Valid booking requests: ${validRequests.length}/${requestsData.bookingRequests?.length || 0}`)
+              console.log(`🔍 [Dashboard] Valid pending booking requests: ${validRequests.length}/${requestsData.bookingRequests?.length || 0}`)
               setBookingRequests(validRequests)
             } else {
               console.log(`❌ [Dashboard] Failed to fetch booking requests`)
@@ -201,6 +212,13 @@ export default function StudioDashboardPage() {
   // Handle booking request approval/rejection
   const handleBookingRequest = async (requestId: string, action: 'approve' | 'reject') => {
     try {
+      // Immediately update UI to prevent duplicate clicks
+      setBookingRequests(prev => prev.map(req => 
+        req.id === requestId 
+          ? { ...req, status: action === 'approve' ? 'processing' : 'processing' }
+          : req
+      ))
+
       const response = await fetch(`${API_BASE_URL}/api/booking-requests/${requestId}`, {
         method: 'PUT',
         headers: {
@@ -215,26 +233,39 @@ export default function StudioDashboardPage() {
         if (action === 'approve') {
           // Remove from requests and add to bookings
           setBookingRequests(prev => prev.filter(req => req.id !== requestId))
-          setBookings(prev => [...prev, result])
+          // Add the new booking to the bookings list for calendar display
+          if (result.booking) {
+            setBookings(prev => [...prev, result.booking])
+          }
           toast({
             title: "Booking Approved",
             description: "The booking has been confirmed and added to your calendar.",
           })
         } else {
-          // Update request status to rejected
-          setBookingRequests(prev => 
-            prev.map(req => req.id === requestId ? { ...req, status: 'rejected' } : req)
-          )
+          // Remove rejected request from the list completely
+          setBookingRequests(prev => prev.filter(req => req.id !== requestId))
           toast({
             title: "Booking Rejected",
             description: "The booking request has been declined.",
           })
         }
       } else {
+        // Revert UI state on error
+        setBookingRequests(prev => prev.map(req => 
+          req.id === requestId 
+            ? { ...req, status: 'pending' }
+            : req
+        ))
         throw new Error('Failed to update booking request')
       }
     } catch (error) {
       console.error('Error handling booking request:', error)
+      // Revert UI state on error
+      setBookingRequests(prev => prev.map(req => 
+        req.id === requestId 
+          ? { ...req, status: 'pending' }
+          : req
+      ))
       toast({
         title: "Error",
         description: "Failed to update booking request. Please try again.",
@@ -252,23 +283,36 @@ export default function StudioDashboardPage() {
   // Function to get bookings for a specific day and time slot
   const getBookingsForSlot = (date: string, timeSlot: string) => {
     return bookings.filter(
-      (booking) =>
-        booking.date === date &&
-        ((timeSlot === "morning" && booking.startTime >= "08:00" && booking.startTime < "12:00") ||
-          (timeSlot === "afternoon" && booking.startTime >= "12:00" && booking.startTime < "17:00") ||
-          (timeSlot === "evening" && booking.startTime >= "17:00" && booking.startTime <= "23:00")),
+      (booking) => {
+        // Ensure we have valid booking data
+        if (!booking || !booking.date || !booking.startTime) {
+          return false
+        }
+        
+        // Check if the booking is for this date
+        const bookingDate = booking.date
+        if (bookingDate !== date) {
+          return false
+        }
+        
+        // Parse start time to determine time slot
+        const startTime = booking.startTime
+        const hour = parseInt(startTime.split(':')[0])
+        
+        // Determine which time slot this booking belongs to
+        let bookingTimeSlot = ''
+        if (hour >= 8 && hour < 12) {
+          bookingTimeSlot = 'morning'
+        } else if (hour >= 12 && hour < 17) {
+          bookingTimeSlot = 'afternoon'
+        } else if (hour >= 17 && hour <= 23) {
+          bookingTimeSlot = 'evening'
+        }
+        
+        return bookingTimeSlot === timeSlot.toLowerCase()
+      }
     )
   }
-
-  // Add debugging before render
-  console.log('🔍 [Dashboard] Rendering with data:', {
-    bookingRequestsCount: bookingRequests.length,
-    bookingsCount: bookings.length,
-    requestIds: bookingRequests.map(r => r?.id),
-    bookingIds: bookings.map(b => b?.id),
-    invalidRequests: bookingRequests.filter(r => !r?.id).length,
-    invalidBookings: bookings.filter(b => !b?.id).length
-  })
 
   return (
     <SidebarProvider>
@@ -339,75 +383,39 @@ export default function StudioDashboardPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-8 gap-1">
-                    <div className="p-2 text-center font-medium text-sm">Time</div>
+                  <div className="grid grid-cols-8 gap-1 text-xs">
+                    <div className="font-medium text-center py-2"></div>
                     {weekDays.map((day) => (
-                      <div key={day.toString()} className="p-2 text-center font-medium text-sm">
+                      <div key={day.toString()} className="font-medium text-center py-2">
                         <div>{format(day, "EEE")}</div>
-                        <div
-                          className={`text-xs ${format(day, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd") ? "bg-primary text-primary-foreground rounded-full px-1" : ""}`}
-                        >
-                          {format(day, "d")}
-                        </div>
+                        <div className="text-lg">{format(day, "d")}</div>
                       </div>
                     ))}
-
-                    {/* Morning time slot */}
-                    <div className="p-2 text-xs text-muted-foreground">8AM - 12PM</div>
-                    {weekDays.map((day) => {
-                      const dayStr = format(day, "yyyy-MM-dd")
-                      const dayBookings = getBookingsForSlot(dayStr, "morning")
-                      return (
-                        <div key={`morning-${dayStr}`} className="min-h-[60px] border rounded-md p-1 text-xs">
-                          {dayBookings.map((booking) => (
-                            <div key={booking.id} className="bg-primary/10 rounded p-1 mb-1 truncate">
-                              <div className="font-medium">{booking.artistName}</div>
-                              <div>
-                                {booking.startTime} - {booking.endTime}
-                              </div>
-                            </div>
-                          ))}
+                    
+                    {["Morning", "Afternoon", "Evening"].map((timeSlot) => (
+                      <React.Fragment key={timeSlot}>
+                        <div className="font-medium py-3 pr-2 text-right">
+                          {timeSlot}
                         </div>
-                      )
-                    })}
-
-                    {/* Afternoon time slot */}
-                    <div className="p-2 text-xs text-muted-foreground">12PM - 5PM</div>
-                    {weekDays.map((day) => {
-                      const dayStr = format(day, "yyyy-MM-dd")
-                      const dayBookings = getBookingsForSlot(dayStr, "afternoon")
-                      return (
-                        <div key={`afternoon-${dayStr}`} className="min-h-[60px] border rounded-md p-1 text-xs">
-                          {dayBookings.map((booking) => (
-                            <div key={booking.id} className="bg-primary/10 rounded p-1 mb-1 truncate">
-                              <div className="font-medium">{booking.artistName}</div>
-                              <div>
-                                {booking.startTime} - {booking.endTime}
-                              </div>
+                        {weekDays.map((day) => {
+                          const dayString = format(day, "yyyy-MM-dd")
+                          const slotBookings = getBookingsForSlot(dayString, timeSlot.toLowerCase())
+                          return (
+                            <div key={`${day.toString()}-${timeSlot}`} className="border rounded p-1 min-h-[60px] relative">
+                              {slotBookings.map((booking, index) => (
+                                <div
+                                  key={booking.id || `booking-${index}`}
+                                  className="bg-blue-100 text-blue-800 text-xs p-1 rounded mb-1 truncate"
+                                  title={`${booking.userName} - ${booking.startTime}-${booking.endTime}`}
+                                >
+                                  {booking.userName}
+                                </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
-                      )
-                    })}
-
-                    {/* Evening time slot */}
-                    <div className="p-2 text-xs text-muted-foreground">5PM - 11PM</div>
-                    {weekDays.map((day) => {
-                      const dayStr = format(day, "yyyy-MM-dd")
-                      const dayBookings = getBookingsForSlot(dayStr, "evening")
-                      return (
-                        <div key={`evening-${dayStr}`} className="min-h-[60px] border rounded-md p-1 text-xs">
-                          {dayBookings.map((booking) => (
-                            <div key={booking.id} className="bg-primary/10 rounded p-1 mb-1 truncate">
-                              <div className="font-medium">{booking.artistName}</div>
-                              <div>
-                                {booking.startTime} - {booking.endTime}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )
-                    })}
+                          )
+                        })}
+                      </React.Fragment>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
@@ -415,14 +423,14 @@ export default function StudioDashboardPage() {
               <div className="space-y-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Studio Management</CardTitle>
-                    <CardDescription>Manage your studio details</CardDescription>
+                    <CardTitle>Quick Actions</CardTitle>
+                    <CardDescription>Manage your studio settings</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-2">
                     <Button variant="outline" className="w-full justify-start" asChild>
-                      <Link href="/studio-dashboard/profile?tab=photos">
-                        <Upload className="mr-2 h-4 w-4" />
-                        Upload Images
+                      <Link href="/studio-dashboard/profile">
+                        <Settings className="mr-2 h-4 w-4" />
+                        Studio Settings
                       </Link>
                     </Button>
                     <Button variant="outline" className="w-full justify-start" asChild>
@@ -434,13 +442,7 @@ export default function StudioDashboardPage() {
                     <Button variant="outline" className="w-full justify-start" asChild>
                       <Link href="/studio-dashboard/profile?tab=staff">
                         <Users className="mr-2 h-4 w-4" />
-                        Manage Studio Staff Bios
-                      </Link>
-                    </Button>
-                    <Button variant="outline" className="w-full justify-start" asChild>
-                      <Link href="/studio-dashboard/reviews">
-                        <Star className="mr-2 h-4 w-4" />
-                        View Reviews
+                        Manage Staff
                       </Link>
                     </Button>
                   </CardContent>
@@ -481,11 +483,24 @@ export default function StudioDashboardPage() {
                           </div>
                           <div className="text-sm italic">"{request.message}"</div>
                           <div className="flex gap-2">
-                            <Button size="sm" className="flex-1" onClick={() => handleBookingRequest(request.id, 'approve')}>
-                              <Check className="mr-1 h-4 w-4" /> Confirm
+                            <Button 
+                              size="sm" 
+                              className="flex-1" 
+                              onClick={() => handleBookingRequest(request.id, 'approve')}
+                              disabled={request.status === 'processing'}
+                            >
+                              <Check className="mr-1 h-4 w-4" /> 
+                              {request.status === 'processing' ? 'Processing...' : 'Confirm'}
                             </Button>
-                            <Button variant="outline" size="sm" className="flex-1" onClick={() => handleBookingRequest(request.id, 'reject')}>
-                              <X className="mr-1 h-4 w-4" /> Decline
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="flex-1" 
+                              onClick={() => handleBookingRequest(request.id, 'reject')}
+                              disabled={request.status === 'processing'}
+                            >
+                              <X className="mr-1 h-4 w-4" /> 
+                              {request.status === 'processing' ? 'Processing...' : 'Decline'}
                             </Button>
                           </div>
                         </div>
@@ -503,9 +518,13 @@ export default function StudioDashboardPage() {
             </div>
 
             <Tabs defaultValue="upcoming" className="space-y-4">
-              <TabsList>
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="upcoming">Upcoming Bookings</TabsTrigger>
                 <TabsTrigger value="past">Past Bookings</TabsTrigger>
+                <TabsTrigger value="open-calls" className="flex items-center gap-2">
+                  <Megaphone className="h-4 w-4" />
+                  Open Calls
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="upcoming">
@@ -557,6 +576,14 @@ export default function StudioDashboardPage() {
                   <p className="text-sm text-muted-foreground mt-1">View your booking history and artist reviews</p>
                 </div>
               </TabsContent>
+
+              <TabsContent value="open-calls">
+                <OpenCallsTab 
+                  userType="studio" 
+                  userId={user?.id || ''} 
+                  studioId={studioId}
+                />
+              </TabsContent>
             </Tabs>
           </div>
         </SidebarInset>
@@ -596,14 +623,6 @@ function StudioDashboardSidebar({ studio }: { studio: { name: string; avatar: st
               <Link href="/studio-dashboard/bookings">
                 <BookOpen className="h-4 w-4" />
                 <span>Bookings</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <Link href="/open-calls">
-                <Megaphone className="h-4 w-4" />
-                <span>Open Calls</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

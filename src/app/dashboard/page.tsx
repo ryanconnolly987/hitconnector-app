@@ -1,12 +1,27 @@
-'use client'
+"use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { CalendarDays, Clock, MapPin, Settings, Search, Calendar, Star, Users, Heart, Music, Megaphone, User } from "lucide-react"
+import {
+  CalendarDays,
+  Clock,
+  Settings,
+  MapPin,
+  Users,
+  Star,
+  Search,
+  Heart,
+  Music,
+  User,
+  Calendar,
+  Megaphone
+} from "lucide-react"
 import { useAuth } from "@/lib/auth"
-import { useEffect, useState } from "react"
+import { API_BASE_URL } from "@/lib/config"
 import { useFollowing } from "@/hooks/use-follow"
 import { MusicPlayer } from "@/components/ui/music-player"
+import OpenCallsTab from "@/components/open-calls-tab"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,8 +40,6 @@ import {
   SidebarProvider,
   SidebarInset,
 } from "@/components/ui/sidebar"
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'
 
 interface DashboardSidebarProps {
   userName: string
@@ -150,7 +163,7 @@ export default function DashboardPage() {
               </div>
             </header>
 
-            <Tabs defaultValue="upcoming" className="space-y-4">
+            <Tabs defaultValue="overview" className="space-y-4">
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="overview" className="flex items-center gap-2">
                   <CalendarDays className="h-4 w-4" />
@@ -409,33 +422,10 @@ export default function DashboardPage() {
               </TabsContent>
 
               <TabsContent value="open-calls" className="space-y-6">
-                <div className="grid gap-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Megaphone className="h-5 w-5" />
-                        Open Calls & Opportunities
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-center py-8">
-                        <Megaphone className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                        <h3 className="text-lg font-medium mb-2">Post Your Open Call</h3>
-                        <p className="text-muted-foreground mb-4">
-                          Looking for collaborators? Post an open call to find musicians, producers, or engineers.
-                        </p>
-                        <div className="flex gap-2 justify-center">
-                          <Button asChild>
-                            <Link href="/open-calls/new">Post Open Call</Link>
-                          </Button>
-                          <Button variant="outline" asChild>
-                            <Link href="/open-calls">Browse Open Calls</Link>
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                <OpenCallsTab 
+                  userType="artist" 
+                  userId={user?.id || ''} 
+                />
               </TabsContent>
             </Tabs>
           </div>
@@ -468,14 +458,6 @@ function DashboardSidebar({ userName, userEmail, userInitials }: DashboardSideba
               <Link href="/find-studios">
                 <Search className="h-4 w-4" />
                 <span>Find Studios</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <Link href="/open-calls">
-                <Megaphone className="h-4 w-4" />
-                <span>Open Calls</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

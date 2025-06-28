@@ -34,9 +34,6 @@ export default function HomePage() {
             <span className="text-xl font-bold">HitConnector</span>
           </Link>
           <nav className="hidden md:flex gap-6">
-            <Link href="/open-calls" className="text-sm font-medium hover:underline underline-offset-4">
-              Open Calls
-            </Link>
             <Link href="/how-it-works" className="text-sm font-medium hover:underline underline-offset-4">
               How It Works
             </Link>

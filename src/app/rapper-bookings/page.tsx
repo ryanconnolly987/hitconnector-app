@@ -1,119 +1,111 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { format, parseISO, isAfter, isBefore } from "date-fns"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardFooter } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { CalendarIcon, Clock, MapPin, Grid, CalendarDays, Music, Eye } from "lucide-react"
-import { Calendar } from "@/components/ui/calendar"
+import { CalendarIcon, Clock, MapPin, Music, Eye, Grid, Calendar as CalendarView } from "lucide-react"
+import { useAuth } from "@/lib/auth"
+import { useToast } from "@/hooks/use-toast"
+import { API_BASE_URL } from "@/lib/config"
 
-// Define the booking type
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardFooter } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Calendar } from "@/components/ui/calendar"
+import Link from "next/link"
+
 interface Booking {
   id: string
+  studioId: string
   studioName: string
-  studioImage: string
+  roomId?: string
+  roomName?: string
+  userId: string
+  userName: string
+  userEmail: string
   date: string
   startTime: string
   endTime: string
-  location: string
-  room: string
-  status: "confirmed" | "pending" | "completed" | "cancelled"
+  duration: number
+  hourlyRate?: number
+  totalCost: number
+  message: string
+  status: "confirmed" | "completed" | "cancelled" | "pending"
+  createdAt: string
+  approvedAt?: string
 }
 
 export default function RapperBookingsPage() {
-  // State for view mode (grid or calendar)
   const [viewMode, setViewMode] = useState<"grid" | "calendar">("grid")
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
+  const [bookings, setBookings] = useState<Booking[]>([])
+  const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
+  const { toast } = useToast()
 
-  // Mock bookings data
-  const allBookings: Booking[] = [
-    {
-      id: "1",
-      studioName: "Soundwave Studios",
-      studioImage: "/placeholder.svg?height=80&width=80",
-      date: "2025-05-15",
-      startTime: "14:00",
-      endTime: "17:00",
-      location: "Los Angeles, CA",
-      room: "Studio A",
-      status: "confirmed",
-    },
-    {
-      id: "2",
-      studioName: "Beat Factory",
-      studioImage: "/placeholder.svg?height=80&width=80",
-      date: "2025-05-22",
-      startTime: "10:00",
-      endTime: "13:00",
-      location: "Atlanta, GA",
-      room: "Studio B",
-      status: "pending",
-    },
-    {
-      id: "3",
-      studioName: "Rhythm House",
-      studioImage: "/placeholder.svg?height=80&width=80",
-      date: "2025-04-28",
-      startTime: "15:00",
-      endTime: "18:00",
-      location: "New York, NY",
-      room: "Main Studio",
-      status: "completed",
-    },
-    {
-      id: "4",
-      studioName: "Flow Records",
-      studioImage: "/placeholder.svg?height=80&width=80",
-      date: "2025-04-15",
-      startTime: "13:00",
-      endTime: "16:00",
-      location: "Miami, FL",
-      room: "Studio C",
-      status: "completed",
-    },
-    {
-      id: "5",
-      studioName: "Echo Chamber",
-      studioImage: "/placeholder.svg?height=80&width=80",
-      date: "2025-06-05",
-      startTime: "18:00",
-      endTime: "21:00",
-      location: "Chicago, IL",
-      room: "Vocal Booth",
-      status: "confirmed",
-    },
-    {
-      id: "6",
-      studioName: "Platinum Sound",
-      studioImage: "/placeholder.svg?height=80&width=80",
-      date: "2025-06-12",
-      startTime: "11:00",
-      endTime: "14:00",
-      location: "Nashville, TN",
-      room: "Studio A",
-      status: "confirmed",
-    },
-  ]
+  // Fetch user's bookings
+  useEffect(() => {
+    const fetchBookings = async () => {
+      if (!user?.id) {
+        setLoading(false)
+        return
+      }
+
+      try {
+        console.log('🔍 [Rapper Bookings] Fetching bookings for user:', user.id)
+        
+        const response = await fetch(`${API_BASE_URL}/api/bookings?userId=${user.id}`)
+        if (response.ok) {
+          const data = await response.json()
+          console.log('✅ [Rapper Bookings] Bookings fetched:', data.bookings?.length || 0)
+          
+          // Validate and filter bookings
+          const validBookings = (data.bookings || []).filter((booking: any) => {
+            if (!booking.id) {
+              console.warn('⚠️ [Rapper Bookings] Found booking without ID:', booking)
+              return false
+            }
+            return true
+          })
+          
+          setBookings(validBookings)
+        } else {
+          console.error('❌ [Rapper Bookings] Failed to fetch bookings')
+          setBookings([])
+        }
+      } catch (error) {
+        console.error('Error fetching bookings:', error)
+        setBookings([])
+        toast({
+          title: "Error",
+          description: "Failed to load your bookings. Please try again.",
+          variant: "destructive"
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchBookings()
+  }, [user, toast])
 
   // Filter bookings based on tab (upcoming or past)
-  const upcomingBookings = allBookings.filter((booking) => {
+  const upcomingBookings = bookings.filter((booking) => {
     const bookingDate = parseISO(booking.date)
     const today = new Date()
-    return isAfter(bookingDate, today) || booking.status === "pending"
+    return isAfter(bookingDate, today) || booking.status === "pending" || booking.status === "confirmed"
   })
 
-  const pastBookings = allBookings.filter((booking) => {
+  const pastBookings = bookings.filter((booking) => {
     const bookingDate = parseISO(booking.date)
     const today = new Date()
-    return isBefore(bookingDate, today) && booking.status !== "pending"
+    return (isBefore(bookingDate, today) && booking.status !== "pending") || booking.status === "completed"
   })
 
   // Get bookings for a specific date (for calendar view)
   const getBookingsForDate = (date: Date) => {
     const dateString = format(date, "yyyy-MM-dd")
-    return allBookings.filter((booking) => booking.date === dateString)
+    return bookings.filter((booking) => booking.date === dateString)
   }
 
   // Get status badge variant
@@ -145,7 +137,7 @@ export default function RapperBookingsPage() {
             You don't have any {bookings === upcomingBookings ? "upcoming" : "past"} studio sessions.
           </p>
           <Button asChild>
-            <a href="/find-studios">Find Studios</a>
+            <Link href="/studios">Find Studios</Link>
           </Button>
         </div>
       )
@@ -156,12 +148,8 @@ export default function RapperBookingsPage() {
         {bookings.map((booking) => (
           <Card key={booking.id} className="overflow-hidden">
             <div className="bg-muted/50 p-4 flex items-center gap-4">
-              <div className="h-16 w-16 overflow-hidden rounded-md bg-muted">
-                <img
-                  src={booking.studioImage || "/placeholder.svg"}
-                  alt={booking.studioName}
-                  className="h-full w-full object-cover"
-                />
+              <div className="h-16 w-16 overflow-hidden rounded-md bg-muted flex items-center justify-center">
+                <Music className="h-8 w-8 text-muted-foreground" />
               </div>
               <div>
                 <h3 className="font-semibold">{booking.studioName}</h3>
@@ -182,13 +170,14 @@ export default function RapperBookingsPage() {
                     {booking.startTime} - {booking.endTime}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span>{booking.location}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Music className="h-4 w-4 text-muted-foreground" />
-                  <span>{booking.room}</span>
+                {booking.roomName && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Music className="h-4 w-4 text-muted-foreground" />
+                    <span>{booking.roomName}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <span>${booking.totalCost}</span>
                 </div>
               </div>
             </CardContent>
@@ -218,60 +207,28 @@ export default function RapperBookingsPage() {
             selected={selectedDate}
             onSelect={setSelectedDate}
             className="rounded-md border"
-            modifiers={{
-              booked: (date) => {
-                const dateString = format(date, "yyyy-MM-dd")
-                return allBookings.some((booking) => booking.date === dateString)
-              },
-            }}
-            modifiersStyles={{
-              booked: { fontWeight: "bold", backgroundColor: "hsl(var(--primary) / 0.1)" },
-            }}
           />
         </div>
         <div>
-          <h3 className="text-lg font-semibold mb-4">
-            {selectedDate ? format(selectedDate, "MMMM d, yyyy") : "Select a date"}
+          <h3 className="mb-4 text-lg font-semibold">
+            Bookings for {selectedDate ? format(selectedDate, "MMMM d, yyyy") : "Selected Date"}
           </h3>
           {bookingsForSelectedDate.length > 0 ? (
             <div className="space-y-4">
               {bookingsForSelectedDate.map((booking) => (
                 <Card key={booking.id}>
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 overflow-hidden rounded-md bg-muted">
-                        <img
-                          src={booking.studioImage || "/placeholder.svg"}
-                          alt={booking.studioName}
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
                       <div>
                         <h4 className="font-semibold">{booking.studioName}</h4>
-                        <div className="flex items-center gap-4 text-sm">
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-3 w-3 text-muted-foreground" />
-                            <span>
-                              {booking.startTime} - {booking.endTime}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Music className="h-3 w-3 text-muted-foreground" />
-                            <span>{booking.room}</span>
-                          </div>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span>{booking.startTime} - {booking.endTime}</span>
+                          {booking.roomName && <span>{booking.roomName}</span>}
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
                       <Badge variant={getStatusVariant(booking.status)}>
                         {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
                       </Badge>
-                      <Button variant="ghost" size="sm" asChild>
-                        <a href={`/bookings/${booking.id}`}>
-                          <Eye className="h-4 w-4" />
-                          <span className="sr-only">View Details</span>
-                        </a>
-                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -279,7 +236,11 @@ export default function RapperBookingsPage() {
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-              <p className="text-muted-foreground">No bookings for this date</p>
+              <CalendarIcon className="h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-4 text-lg font-semibold">No bookings</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                You don't have any bookings for this date.
+              </p>
             </div>
           )}
         </div>
@@ -287,25 +248,42 @@ export default function RapperBookingsPage() {
     )
   }
 
+  if (loading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading your bookings...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="container max-w-7xl py-10">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">My Bookings</h1>
-          <p className="text-muted-foreground">Track and manage your studio sessions</p>
+          <h1 className="text-3xl font-bold tracking-tight">My Bookings</h1>
+          <p className="text-muted-foreground">
+            Manage your studio sessions and track your booking history
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant={viewMode === "grid" ? "default" : "outline"} size="sm" onClick={() => setViewMode("grid")}>
-            <Grid className="mr-2 h-4 w-4" />
-            Grid
+          <Button
+            variant={viewMode === "grid" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode("grid")}
+          >
+            <Grid className="h-4 w-4" />
           </Button>
           <Button
             variant={viewMode === "calendar" ? "default" : "outline"}
             size="sm"
             onClick={() => setViewMode("calendar")}
           >
-            <CalendarDays className="mr-2 h-4 w-4" />
-            Calendar
+            <CalendarView className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -313,13 +291,15 @@ export default function RapperBookingsPage() {
       {viewMode === "grid" ? (
         <Tabs defaultValue="upcoming" className="space-y-6">
           <TabsList>
-            <TabsTrigger value="upcoming">Upcoming Bookings ({upcomingBookings.length})</TabsTrigger>
-            <TabsTrigger value="past">Past Bookings ({pastBookings.length})</TabsTrigger>
+            <TabsTrigger value="upcoming">Upcoming ({upcomingBookings.length})</TabsTrigger>
+            <TabsTrigger value="past">Past ({pastBookings.length})</TabsTrigger>
           </TabsList>
-          <TabsContent value="upcoming" className="space-y-4">
+
+          <TabsContent value="upcoming" className="space-y-6">
             {renderBookingCards(upcomingBookings)}
           </TabsContent>
-          <TabsContent value="past" className="space-y-4">
+
+          <TabsContent value="past" className="space-y-6">
             {renderBookingCards(pastBookings)}
           </TabsContent>
         </Tabs>
