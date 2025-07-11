@@ -102,10 +102,13 @@ export default function StudioProfilePage() {
     if (!user?.email && !user?.id) return
     
     try {
+      console.time('loadStudioProfileData');
       // First, try to load from API (primary source)
       console.log('🔍 [Profile] Loading studio data from API for user:', { email: user.email, id: user.id })
       
-      const response = await fetch(`${API_BASE_URL}/api/studios`)
+      const studiosUrl = '/api/studios'
+      console.log('[DEBUG] Fetching from:', studiosUrl)
+      const response = await fetch(studiosUrl)
       if (response.ok) {
         const data = await response.json()
         const userStudios = data.studios?.filter((studio: any) => 
@@ -157,6 +160,7 @@ export default function StudioProfilePage() {
           console.log('🕒 [Profile] Operating hours loaded:', studio.operatingHours)
           console.log('📍 [Profile] Available status:', studio.isAvailable)
           
+          console.timeEnd('loadStudioProfileData');
           return // Successfully loaded from API, no need for localStorage fallback
         }
       }
@@ -206,8 +210,10 @@ export default function StudioProfilePage() {
         
         console.log('📱 [Profile] Individual data loaded from localStorage')
       }
+      console.timeEnd('loadStudioProfileData');
     } catch (error) {
       console.error('❌ [Profile] Error loading studio data:', error)
+      console.timeEnd('loadStudioProfileData');
     }
   }
 
@@ -215,11 +221,15 @@ export default function StudioProfilePage() {
     if (!user?.email && !user?.id) return
     
     try {
+      console.time('fetchBookingRequests');
       console.log('🔍 [Profile] Fetching studios for user:', { email: user.email, id: user.id })
       
-      // First, find all studios owned by this user
-      const studiosResponse = await fetch(`${API_BASE_URL}/api/studios`)
+      // First, find all studios owned by this user - using relative path for better performance
+      const studiosUrl = '/api/studios'
+      console.log('[DEBUG] Fetching from:', studiosUrl)
+      const studiosResponse = await fetch(studiosUrl)
       if (!studiosResponse.ok) {
+        console.timeEnd('fetchBookingRequests');
         return
       }
       
@@ -234,35 +244,43 @@ export default function StudioProfilePage() {
       
       if (userStudios.length === 0) {
         setBookingRequests([])
+        console.timeEnd('fetchBookingRequests');
         return
       }
       
-      // Fetch booking requests for all user's studios
+      // Fetch booking requests for all user's studios - using parallel requests for better performance
       const allBookingRequests: any[] = []
       
-      for (const studio of userStudios) {
+      const bookingRequestPromises = userStudios.map(async (studio: any) => {
         console.log(`📋 [Profile] Fetching booking requests for studio: ${studio.id} (${studio.name})`)
         
         const response = await fetch(`${API_BASE_URL}/api/booking-requests?studioId=${studio.id}`)
         if (response.ok) {
           const data = await response.json()
           console.log(`✅ [Profile] Found ${data.bookingRequests?.length || 0} booking requests for ${studio.name}`)
-          allBookingRequests.push(...(data.bookingRequests || []))
+          return data.bookingRequests || []
         } else {
           console.log(`❌ [Profile] Failed to fetch booking requests for ${studio.name}`)
+          return []
         }
-      }
+      })
+      
+      const results = await Promise.all(bookingRequestPromises)
+      results.forEach(requests => allBookingRequests.push(...requests))
       
       console.log('🎯 [Profile] Total booking requests found:', allBookingRequests.length)
       setBookingRequests(allBookingRequests)
+      console.timeEnd('fetchBookingRequests');
     } catch (error) {
       console.error('Error fetching booking requests:', error)
+      console.timeEnd('fetchBookingRequests');
     }
   }
 
-  const handleBookingRequest = async (requestId: string, action: 'approve' | 'reject') => {
+  const handleBookingRequestAction = async (requestId: string, action: 'approve' | 'reject') => {
     try {
-      setLoading(true)
+      console.log(`📋 [Profile] ${action}ing booking request:`, requestId)
+      
       const response = await fetch(`${API_BASE_URL}/api/booking-requests/${requestId}`, {
         method: 'PUT',
         headers: {
@@ -725,20 +743,17 @@ export default function StudioProfilePage() {
                             <div className="flex gap-2 ml-4">
                               <Button
                                 size="sm"
-                                variant="outline"
-                                onClick={() => handleBookingRequest(request.id, 'reject')}
-                                disabled={loading}
+                                onClick={() => handleBookingRequestAction(request.id, 'approve')}
+                                className="mr-2"
                               >
-                                <XCircle className="h-4 w-4 mr-1" />
-                                Reject
+                                Approve
                               </Button>
                               <Button
                                 size="sm"
-                                onClick={() => handleBookingRequest(request.id, 'approve')}
-                                disabled={loading}
+                                onClick={() => handleBookingRequestAction(request.id, 'reject')}
+                                variant="outline"
                               >
-                                <CheckCircle className="h-4 w-4 mr-1" />
-                                Approve
+                                Reject
                               </Button>
                             </div>
                           )}

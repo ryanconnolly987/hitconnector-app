@@ -3,8 +3,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { useToast } from '@/hooks/use-toast'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'
-
 // Types
 
 interface User {
@@ -31,19 +29,14 @@ interface AuthContextType {
   login: (email: string, password: string, role: 'rapper' | 'studio') => Promise<boolean>
   signup: (data: SignupData) => Promise<{ success: boolean; redirectToLogin?: boolean }>
   logout: () => void
+  updateUser: (updatedUser: User) => void
   loading: boolean
 }
 
 // API Client
 export class ApiClient {
-  private baseURL: string
-
-  constructor(baseURL: string = API_BASE_URL) {
-    this.baseURL = baseURL
-  }
-
   private async request(endpoint: string, options: RequestInit = {}) {
-    const url = `${this.baseURL}${endpoint}`
+    const url = endpoint.startsWith('/') ? endpoint : `/${endpoint}`
     console.log('Making API request to:', url)
     
     const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
@@ -58,7 +51,14 @@ export class ApiClient {
     })
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      const errorText = await response.text()
+      let errorData
+      try {
+        errorData = JSON.parse(errorText)
+      } catch {
+        errorData = { error: errorText }
+      }
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
     }
 
     const result = await response.json()
@@ -136,7 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!mounted) return false
     
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -173,7 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Login error:', error)
       toast({
         title: "Login Failed",
-        description: "Network error. Please try again.",
+        description: error instanceof Error ? error.message : "Network error. Please try again.",
         variant: "destructive"
       })
       return false
@@ -184,7 +184,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!mounted) return { success: false }
     
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/signup`, {
+      const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -200,8 +200,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           studioId: result.studioId  // Store studioId if provided
         }
         setUser(userData)
-        localStorage.setItem('user', JSON.stringify(userData))
-        localStorage.setItem('token', result.token)
+        localStorage.setItem('auth_token', result.token)
+        localStorage.setItem('user_data', JSON.stringify(userData))
         
         toast({
           title: "Account Created!",
@@ -230,7 +230,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Signup error:', error)
       toast({
         title: "Signup Failed",
-        description: "Network error. Please try again.",
+        description: error instanceof Error ? error.message : "Network error. Please try again.",
         variant: "destructive"
       })
       return { success: false }
@@ -257,13 +257,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
   }
 
+  const updateUser = (updatedUser: User) => {
+    setUser(updatedUser)
+    localStorage.setItem('user_data', JSON.stringify(updatedUser))
+  }
+
   // Don't render children until mounted to avoid hydration issues
   if (!mounted) {
     return null
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, signup, logout, updateUser, loading }}>
       {children}
     </AuthContext.Provider>
   )

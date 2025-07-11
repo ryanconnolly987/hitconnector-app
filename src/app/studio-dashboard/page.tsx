@@ -17,7 +17,9 @@ import {
   LayoutDashboard,
   BookOpen,
   Heart,
-  Megaphone
+  Megaphone,
+  User,
+  MessageSquare
 } from "lucide-react"
 import { useAuth } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
@@ -84,23 +86,36 @@ export default function StudioDashboardPage() {
       }
       
       try {
+        console.time('loadDashboardData'); // added performance timing
         console.log('🔍 [Dashboard] Fetching studio data and bookings for user:', { email: user.email, id: user.id, studioId: user.studioId })
         
-        // First, fetch studio data
-        const studiosResponse = await fetch(`${API_BASE_URL}/api/studios`)
+        // First, fetch studio data using backend API
+        const studiosUrl = `${API_BASE_URL}/api/studios`
+        console.log('[DEBUG] Fetching from:', studiosUrl)
+        const studiosResponse = await fetch(studiosUrl)
         if (!studiosResponse.ok) {
           throw new Error('Failed to fetch studios')
         }
         
         const studiosData = await studiosResponse.json()
-        const userStudios = studiosData.studios.filter((studio: any) => 
+        console.log('📊 [Dashboard] Studios data received:', studiosData.studios?.length || 0)
+        
+        // Filter studios owned by this user
+        const userStudios = studiosData.studios?.filter((studio: any) => 
           studio.owner === user.email || studio.owner === user.id
-        )
+        ) || []
         
         console.log('🏢 [Dashboard] User studios found:', userStudios.length)
         
         if (userStudios.length > 0) {
-          const studio = userStudios[0] // Use the first studio
+          const studio = userStudios[0] // Get the first studio
+          console.log('🎯 [Dashboard] Using studio:', { id: studio.id, name: studio.name })
+          
+          // Parallel fetch for better performance - fetch both booking requests and confirmed bookings
+          const [bookingRequestsResponse, confirmedBookingsResponse] = await Promise.all([
+            fetch(`${API_BASE_URL}/api/booking-requests?studioId=${studio.id}`),
+            fetch(`${API_BASE_URL}/api/bookings?studioId=${studio.id}`)
+          ])
           
           // Set studio ID for follow tracking
           const currentStudioId = studio.id || user.studioId
@@ -120,16 +135,9 @@ export default function StudioDashboardPage() {
             hasProfileImage: !!studio.profileImage
           })
           
-          // Now fetch bookings for this studio
-          const studioId = studio.id || user.studioId
-          
-          if (studioId) {
-            console.log(`📋 [Dashboard] Fetching booking data for studio: ${studioId}`)
-            
-            // Fetch booking requests for this studio
-            const requestsResponse = await fetch(`${API_BASE_URL}/api/booking-requests?studioId=${studioId}`)
-            if (requestsResponse.ok) {
-              const requestsData = await requestsResponse.json()
+          // Process booking requests
+          if (bookingRequestsResponse.ok) {
+            const requestsData = await bookingRequestsResponse.json()
               console.log(`✅ [Dashboard] Found ${requestsData.bookingRequests?.length || 0} booking requests`)
               
               // Validate and filter booking requests - only show pending ones
@@ -154,10 +162,9 @@ export default function StudioDashboardPage() {
               setBookingRequests([])
             }
 
-            // Fetch confirmed bookings for this studio
-            const bookingsResponse = await fetch(`${API_BASE_URL}/api/bookings?studioId=${studioId}`)
-            if (bookingsResponse.ok) {
-              const bookingsData = await bookingsResponse.json()
+          // Process confirmed bookings
+          if (confirmedBookingsResponse.ok) {
+            const bookingsData = await confirmedBookingsResponse.json()
               console.log(`✅ [Dashboard] Found ${bookingsData.bookings?.length || 0} confirmed bookings`)
               
               // Validate and filter bookings
@@ -174,7 +181,6 @@ export default function StudioDashboardPage() {
             } else {
               console.log(`❌ [Dashboard] Failed to fetch confirmed bookings`)
               setBookings([])
-            }
           }
         } else {
           // No studio found, set defaults
@@ -202,12 +208,13 @@ export default function StudioDashboardPage() {
         setBookingRequests([])
         setBookings([])
       } finally {
+        console.timeEnd('loadDashboardData'); // added performance timing
         setLoading(false)
       }
     }
 
     fetchData()
-  }, [user])
+  }, [user]) // added proper dependency array to prevent rerender loop
 
   // Handle booking request approval/rejection
   const handleBookingRequest = async (requestId: string, action: 'approve' | 'reject') => {
@@ -219,12 +226,16 @@ export default function StudioDashboardPage() {
           : req
       ))
 
-      const response = await fetch(`${API_BASE_URL}/api/booking-requests/${requestId}`, {
-        method: 'PUT',
+      const endpoint = action === 'approve' 
+        ? `${API_BASE_URL}/api/booking-requests/${requestId}/confirm`
+        : `${API_BASE_URL}/api/booking-requests/${requestId}/decline`
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({}),
       })
 
       if (response.ok) {
@@ -476,6 +487,23 @@ export default function StudioDashboardPage() {
                               <Clock className="h-4 w-4 text-muted-foreground" />
                               <span>{request.startTime} - {request.endTime}</span>
                             </div>
+                            {request.roomName && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground">Room:</span>
+                                <span className="font-medium">{request.roomName}</span>
+                              </div>
+                            )}
+                            {request.staffName ? (
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4 text-muted-foreground" />
+                                <span>Staff: {request.staffName}</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-muted-foreground">No staff preference</span>
+                              </div>
+                            )}
                             <div className="flex items-center gap-2">
                               <DollarSign className="h-4 w-4 text-muted-foreground" />
                               <span>${request.totalCost}</span>
@@ -612,9 +640,17 @@ function StudioDashboardSidebar({ studio }: { studio: { name: string; avatar: st
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
-              <Link href="/studio-profile">
+              <Link href="/studio-dashboard/profile">
                 <Users className="h-4 w-4" />
                 <span>My Studio Profile</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <Link href="/messages">
+                <MessageSquare className="h-4 w-4" />
+                <span>Messages</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

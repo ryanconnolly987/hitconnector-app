@@ -64,36 +64,29 @@ function StudiosPageContent() {
   useEffect(() => {
     const fetchStudios = async () => {
       try {
+        console.time('fetchStudios'); // added performance timing
         console.log('🔍 [Studios] Fetching studios from API')
         
         const response = await fetch(`${API_BASE_URL}/api/studios`)
         if (response.ok) {
           const data = await response.json()
-          console.log('✅ [Studios] Studios fetched:', data.studios?.length || 0)
-          
-          const validStudios = (data.studios || []).filter((studio: any) => {
-            if (!studio.id) {
-              console.warn('⚠️ [Studios] Found studio without ID:', studio)
-              return false
-            }
-            return true
-          })
-          
-          setStudios(validStudios)
+          console.log(`✅ [Studios] Loaded ${data.studios?.length || 0} studios from API`)
+          setStudios(data.studios || [])
         } else {
-          console.error('❌ [Studios] Failed to fetch studios')
+          console.error(`❌ [Studios] Failed to fetch studios - Status: ${response.status}`)
           setStudios([])
         }
       } catch (error) {
-        console.error('Error fetching studios:', error)
+        console.error('❌ [Studios] Error fetching studios:', error)
         setStudios([])
       } finally {
+        console.timeEnd('fetchStudios'); // added performance timing
         setLoading(false)
       }
     }
 
     fetchStudios()
-  }, [])
+  }, []) // added proper dependency array to prevent rerender loop
 
   useEffect(() => {
     // Get search parameters from URL
@@ -133,6 +126,7 @@ function StudiosPageContent() {
 
   const fetchStudios = async () => {
     try {
+      setLoading(true)
       const response = await fetch(`${API_BASE_URL}/api/studios`)
       if (response.ok) {
         const data = await response.json()

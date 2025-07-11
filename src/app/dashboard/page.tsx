@@ -15,7 +15,8 @@ import {
   Music,
   User,
   Calendar,
-  Megaphone
+  Megaphone,
+  MessageSquare
 } from "lucide-react"
 import { useAuth } from "@/lib/auth"
 import { API_BASE_URL } from "@/lib/config"
@@ -45,6 +46,7 @@ interface DashboardSidebarProps {
   userName: string
   userEmail: string
   userInitials: string
+  profileImage?: string
 }
 
 export default function DashboardPage() {
@@ -57,6 +59,7 @@ export default function DashboardPage() {
     bio?: string
     location?: string
     genres?: string[]
+    profileImage?: string
   }>({})
   const { following, loading: followingLoading } = useFollowing()
   
@@ -68,18 +71,20 @@ export default function DashboardPage() {
   // Fetch user's bookings
   useEffect(() => {
     const fetchBookings = async () => {
-      if (!user?.id) return
+      if (!user?.id) {
+        setLoading(false)
+        return
+      }
       
       try {
-        console.log('🔍 [Rapper Dashboard] Fetching bookings for user:', user.id)
+        console.time('fetchBookings'); // added performance timing
+        console.log('🔍 [Dashboard] Fetching bookings for user:', user.id)
         
-        // Fetch all bookings for this user
         const bookingsResponse = await fetch(`${API_BASE_URL}/api/bookings?userId=${user.id}`)
         if (bookingsResponse.ok) {
           const bookingsData = await bookingsResponse.json()
+          console.log(`✅ [Dashboard] Found ${bookingsData.bookings?.length || 0} bookings`)
           const allBookings = bookingsData.bookings || []
-          
-          console.log('📋 [Rapper Dashboard] Found bookings:', allBookings.length)
           
           // Separate upcoming and past bookings
           const now = new Date()
@@ -95,15 +100,16 @@ export default function DashboardPage() {
           setUpcomingBookings(upcoming)
           setPastBookings(past)
         } else {
-          console.log('❌ [Rapper Dashboard] Failed to fetch bookings')
+          console.error(`❌ [Dashboard] Failed to fetch bookings - Status: ${bookingsResponse.status}`)
           setUpcomingBookings([])
           setPastBookings([])
         }
       } catch (error) {
-        console.error('Error fetching bookings:', error)
+        console.error('❌ [Dashboard] Error fetching bookings:', error)
         setUpcomingBookings([])
         setPastBookings([])
       } finally {
+        console.timeEnd('fetchBookings'); // added performance timing
         setLoading(false)
       }
     }
@@ -112,34 +118,55 @@ export default function DashboardPage() {
       if (!user?.id) return
       
       try {
-        console.log('🔍 [Rapper Dashboard] Fetching artist profile for user:', user.id)
+        console.time('fetchArtistProfile'); // added performance timing
+        console.log('🔍 [Dashboard] Fetching artist profile for user:', user.id)
         
         const profileResponse = await fetch(`${API_BASE_URL}/api/users/${user.id}`)
         if (profileResponse.ok) {
           const profileData = await profileResponse.json()
-          setArtistProfile({
-            trackUrl: profileData.trackUrl,
-            bio: profileData.bio,
-            location: profileData.location,
-            genres: profileData.genres || []
-          })
-          console.log('✅ [Rapper Dashboard] Artist profile loaded')
+          console.log('✅ [Dashboard] Artist profile loaded')
+          setArtistProfile(profileData)
         } else {
-          console.log('❌ [Rapper Dashboard] Failed to fetch artist profile')
+          console.error(`❌ [Dashboard] Failed to fetch artist profile - Status: ${profileResponse.status}`)
+          // Set default profile data
+          setArtistProfile({
+            bio: '',
+            location: '',
+            genres: [],
+            trackUrl: '',
+            profileImage: ''
+          })
         }
       } catch (error) {
-        console.error('Error fetching artist profile:', error)
+        console.error('❌ [Dashboard] Error fetching artist profile:', error)
+        // Set default profile data on error
+        setArtistProfile({
+          bio: '',
+          location: '',
+          genres: [],
+          trackUrl: '',
+          profileImage: ''
+        })
+      } finally {
+        console.timeEnd('fetchArtistProfile'); // added performance timing
       }
     }
 
-    fetchBookings()
+    if (user?.id) {
+      fetchBookings()
+    }
     fetchArtistProfile()
-  }, [user])
+  }, [user?.id]) // added proper dependency array to prevent rerender loop
 
   return (
     <SidebarProvider>
       <div className="flex min-h-screen bg-muted/40">
-        <DashboardSidebar userName={userName} userEmail={userEmail} userInitials={userInitials} />
+        <DashboardSidebar 
+          userName={userName} 
+          userEmail={userEmail} 
+          userInitials={userInitials}
+          profileImage={artistProfile.profileImage || user?.avatar}
+        />
         <SidebarInset>
           <div className="flex-1 space-y-6 p-6 md:p-8">
             <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -258,7 +285,7 @@ export default function DashboardPage() {
                     <CardContent className="space-y-4">
                       <div className="flex items-center gap-4">
                         <Avatar className="h-16 w-16">
-                          <AvatarImage src="/placeholder.svg?height=64&width=64" alt={userName} />
+                          <AvatarImage src={artistProfile.profileImage || user?.avatar || "/placeholder.svg?height=64&width=64"} alt={userName} />
                           <AvatarFallback className="text-lg">{userInitials}</AvatarFallback>
                         </Avatar>
                         <div>
@@ -435,7 +462,7 @@ export default function DashboardPage() {
   )
 }
 
-function DashboardSidebar({ userName, userEmail, userInitials }: DashboardSidebarProps) {
+function DashboardSidebar({ userName, userEmail, userInitials, profileImage }: DashboardSidebarProps) {
   return (
     <Sidebar>
       <SidebarHeader>
@@ -463,6 +490,14 @@ function DashboardSidebar({ userName, userEmail, userInitials }: DashboardSideba
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
+              <Link href="/messages">
+                <MessageSquare className="h-4 w-4" />
+                <span>Messages</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
               <Link href="/settings">
                 <Settings className="h-4 w-4" />
                 <span>Account Settings</span>
@@ -474,7 +509,7 @@ function DashboardSidebar({ userName, userEmail, userInitials }: DashboardSideba
       <SidebarFooter>
         <div className="flex items-center gap-4">
           <Avatar>
-            <AvatarImage src="/placeholder.svg?height=40&width=40" alt={userName} />
+            <AvatarImage src={profileImage || "/placeholder.svg?height=40&width=40"} alt={userName} />
             <AvatarFallback>{userInitials}</AvatarFallback>
           </Avatar>
           <div className="flex flex-col">

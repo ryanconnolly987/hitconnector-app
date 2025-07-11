@@ -9,6 +9,10 @@ import { useAuth } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
 import { API_BASE_URL } from "@/lib/config"
 
+// Debug logging to verify the API URL being used
+console.log('🔍 [Config] API_BASE_URL loaded:', API_BASE_URL)
+console.log('🔍 [Config] Environment variable NEXT_PUBLIC_API_BASE_URL:', process.env.NEXT_PUBLIC_API_BASE_URL)
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -195,8 +199,22 @@ function StudioProfileContent() {
     
     const loadStudioData = async () => {
       try {
-        // First try to load from API (primary source)
-        const response = await fetch(`${API_BASE_URL}/api/studios`)
+        console.time('loadProfileData'); // start performance timing
+        // Debug the exact URL being constructed
+        const fullUrl = `${API_BASE_URL}/api/studios`
+        console.log('🔍 [Load] Full URL being constructed:', fullUrl)
+        console.log('🔍 [Load] API_BASE_URL value:', API_BASE_URL)
+        console.log('🔍 [Load] typeof API_BASE_URL:', typeof API_BASE_URL)
+        
+        // First try to load from API (primary source) - using backend API URL
+        const response = await fetch(fullUrl, {
+          // Add timeout and caching headers for better performance
+          signal: AbortSignal.timeout(10000), // 10 second timeout
+          headers: {
+            'Cache-Control': 'no-cache'
+          }
+        })
+        
         if (response.ok) {
           const data = await response.json()
           const userStudios = data.studios?.filter((studio: any) => studio.owner === (user.email || user.id))
@@ -246,11 +264,8 @@ function StudioProfileContent() {
               setStaffMembers(studio.staff)
             }
             
-            console.log('✅ Studio data loaded from API successfully:', {
-              id: studio.id,
-              name: studio.name,
-              followersCount: studio.followersCount || 0
-            })
+            console.log('✅ Studio data loaded from API:', studio.name)
+            console.timeEnd('loadProfileData'); // end performance timing
             return // Successfully loaded from API
           }
         }
@@ -316,8 +331,10 @@ function StudioProfileContent() {
             staff: defaultStaff
           }))
         }
+        console.timeEnd('loadProfileData'); // end performance timing
       } catch (error) {
         console.error('Error loading saved data:', error)
+        console.timeEnd('loadProfileData'); // end performance timing
         toast({
           title: "Error",
           description: "Failed to load saved data",
@@ -327,7 +344,7 @@ function StudioProfileContent() {
     }
     
     loadStudioData()
-  }, [user]) // Add user as dependency so it reloads when user changes
+  }, [user]) // added proper dependency array to prevent rerender loop
 
   const [newAmenity, setNewAmenity] = useState("")
   const [newGenre, setNewGenre] = useState("")
@@ -734,7 +751,8 @@ function StudioProfileContent() {
   const handleSave = async () => {
     try {
       setSaveStatus('saving')
-      console.log('💾 [Save] Starting studio profile save process...')
+      console.time('saveStudioProfile'); // start performance timing
+      console.log('💾 [Save] Starting studio profile save process')
       
       // Validate required fields
       if (!studioData.name.trim()) {
@@ -788,39 +806,91 @@ function StudioProfileContent() {
       
       console.log('📤 [Save] Sending studio data to API:', {
         name: studioApiData.name,
-        hasProfileImage: !!studioApiData.profileImage,
-        hasCoverImage: !!studioApiData.coverImage,
-        galleryCount: studioApiData.gallery.length,
         roomsCount: studioApiData.rooms.length,
         staffCount: studioApiData.staff.length,
-        rooms: studioApiData.rooms.map(r => ({ id: r.id, name: r.name })),
-        staff: studioApiData.staff.map(s => ({ id: s.id, name: s.name, role: s.role })),
-        operatingHours: studioApiData.operatingHours,
-        isAvailable: studioApiData.isAvailable,
+        galleryCount: studioApiData.gallery.length,
         isUpdate: !!studioId
       })
+      
+      // Enhanced fetch function with retry logic
+      const fetchWithRetry = async (url: string, options: RequestInit, maxRetries = 2) => {
+        let lastError: Error | null = null
+        
+        for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
+          // Create a new AbortController for each attempt
+          const controller = new AbortController()
+          let timeoutId: NodeJS.Timeout | null = null
+          
+          try {
+            console.log(`🔄 [Save] Attempt ${attempt}/${maxRetries + 1} for ${options.method} request`)
+            console.log(`[DEBUG] Saving studio to:`, url) // added URL logging for debugging
+            
+            // Set up timeout that will abort the request if it takes too long
+            timeoutId = setTimeout(() => {
+              console.warn(`⏰ [Save] Request timed out after 20s, aborting...`)
+              controller.abort()
+            }, 20000) // 20 second timeout
+            
+            const response = await fetch(url, {
+              ...options,
+              signal: controller.signal,
+              headers: {
+                ...options.headers,
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive'
+              }
+            })
+            
+            // Request succeeded, return the response
+            return response
+            
+          } catch (error) {
+            lastError = error as Error
+            console.warn(`⚠️ [Save] Attempt ${attempt} failed:`, error)
+            
+            // Don't retry on the last attempt
+            if (attempt <= maxRetries) {
+              const delay = Math.min(1000 * attempt, 3000) // Progressive delay: 1s, 2s, 3s
+              console.log(`⏳ [Save] Retrying in ${delay}ms...`)
+              await new Promise(resolve => setTimeout(resolve, delay))
+            }
+          } finally {
+            // Always clear the timeout to prevent "signal is aborted without reason" error
+            if (timeoutId) {
+              clearTimeout(timeoutId)
+            }
+          }
+        }
+        
+        throw lastError || new Error('All retry attempts failed')
+      }
       
       // Determine if this is an update or create
       let response;
       if (studioId) {
         // Update existing studio using PUT
         console.log(`🔄 [Save] Updating existing studio: ${studioId}`)
-        response = await fetch(`${API_BASE_URL}/api/studios/${studioId}`, {
+        response = await fetchWithRetry(`${API_BASE_URL}/api/studios/${studioId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(studioApiData),
+          body: JSON.stringify(studioApiData)
         })
       } else {
         // Create new studio using POST
         console.log('➕ [Save] Creating new studio')
-        response = await fetch(`${API_BASE_URL}/api/studios`, {
+        const saveUrl = `${API_BASE_URL}/api/studios`
+        console.log('🔍 [Save] Full URL being constructed:', saveUrl)
+        console.log('🔍 [Save] API_BASE_URL value:', API_BASE_URL)
+        console.log('🔍 [Save] typeof API_BASE_URL:', typeof API_BASE_URL)
+        
+        response = await fetchWithRetry(saveUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(studioApiData),
+          body: JSON.stringify(studioApiData)
         })
       }
       
@@ -832,13 +902,7 @@ function StudioProfileContent() {
           setStudioId(savedStudio.id)
         }
         
-        console.log('✅ [Save] Studio saved successfully to API:', {
-          id: savedStudio.id,
-          name: savedStudio.name,
-          profileImage: savedStudio.profileImage ? 'Set' : 'Not set',
-          coverImage: savedStudio.coverImage ? 'Set' : 'Not set',
-          followersCount: savedStudio.followersCount || 0
-        })
+        console.log('✅ [Save] Studio saved successfully:', savedStudio.id)
         
         // Only save minimal essential data to localStorage (no images to avoid quota issues)
         try {
@@ -888,29 +952,53 @@ function StudioProfileContent() {
         setSaveStatus('saved')
         toast({
           title: "Profile Saved Successfully! 🎉",
-          description: `Your studio profile has been updated. ${studioData.profileImage ? 'Profile image' : ''} ${studioData.coverImage ? 'Cover image' : ''} ${studioData.galleryImages.length > 0 ? `${studioData.galleryImages.length} gallery images` : ''} saved.`,
+          description: `Your studio profile has been updated.`,
           variant: "default",
         })
         
         console.log('🎯 [Save] Save process completed successfully')
       } else {
+        let errorMessage = `Failed to save studio profile to server (${response.status})`
+        try {
         const errorData = await response.text()
-        console.error('❌ [Save] Failed to save studio to API:', response.status, errorData)
+          if (errorData) {
+            errorMessage += `: ${errorData.substring(0, 100)}`
+          }
+        } catch (parseError) {
+          console.warn('⚠️ [Save] Could not parse error response')
+        }
+        
+        console.error('❌ [Save] Failed to save studio to API:', response.status, response.statusText)
         setSaveStatus('error')
         toast({
           title: "Save Failed",
-          description: `Failed to save studio profile to server (${response.status}). Please try again.`,
+          description: `${errorMessage}. Please try again.`,
           variant: "destructive",
         })
       }
     } catch (error) {
       console.error('💥 [Save] Error saving studio:', error)
       setSaveStatus('error')
+      
+      // Provide more specific error messages based on error type
+      let errorDescription = "An unexpected error occurred while saving."
+      
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        errorDescription = "Network connection failed. Please check your internet connection and try again."
+      } else if (error instanceof Error && error.name === 'AbortError') {
+        errorDescription = "The request timed out. Please try again."
+      } else if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        errorDescription = "Unable to connect to the server. Please check if the backend is running and try again."
+      }
+      
       toast({
         title: "Save Error",
-        description: "An unexpected error occurred while saving. Please check your connection and try again.",
+        description: errorDescription,
         variant: "destructive",
       })
+    } finally {
+      console.timeEnd('saveStudioProfile'); // end performance timing
+      setSaveStatus('idle') // Reset to default state
     }
   }
 

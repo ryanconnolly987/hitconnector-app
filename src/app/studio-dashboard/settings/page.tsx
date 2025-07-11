@@ -5,6 +5,7 @@ import Link from "next/link"
 import { ArrowLeft, Bell, Shield, CreditCard, User, Mail, Phone, Lock, Eye, EyeOff, Upload, Camera } from "lucide-react"
 import { useAuth } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
+import { API_BASE_URL } from "@/lib/config"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,8 +17,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'
 
 export default function SettingsPage() {
   const { user } = useAuth()
@@ -73,9 +72,20 @@ export default function SettingsPage() {
       }
       
       try {
-        console.log('🔍 [Settings] Loading studio data from API for user:', { email: user.email, id: user.id })
+        console.time('loadSettingsData'); // start performance timing
+        console.log('🔍 [Settings] Loading studio data for user:', { email: user.email, id: user.id })
         
-        const response = await fetch(`${API_BASE_URL}/api/studios`)
+        // Construct and log the URL being used
+        const studiosUrl = `${API_BASE_URL}/api/studios`
+        
+        const response = await fetch(studiosUrl, {
+          // Add timeout and caching headers for better performance
+          signal: AbortSignal.timeout(10000), // 10 second timeout
+          headers: {
+            'Cache-Control': 'no-cache'
+          }
+        })
+        
         if (response.ok) {
           const data = await response.json()
           const userStudios = data.studios?.filter((studio: any) => 
@@ -85,7 +95,7 @@ export default function SettingsPage() {
           if (userStudios && userStudios.length > 0) {
             const studio = userStudios[0]
             
-            console.log('✅ [Settings] Studio data loaded from API:', studio.name)
+            console.log('✅ [Settings] Studio data loaded:', studio.name)
             
             // Parse studio name to extract first and last name if available
             const nameParts = studio.name ? studio.name.split(' ') : ['', '']
@@ -104,12 +114,8 @@ export default function SettingsPage() {
               language: "en", // Default, could be stored in studio data
               profileImage: studio.profileImage || ''
             })
-            
-            console.log('📋 [Settings] Account data set:', {
-              studioName: studio.name,
-              hasProfileImage: !!studio.profileImage
-            })
           } else {
+            console.log('⚠️ [Settings] No studio found for user, using defaults')
             // No studio found, set defaults with user data
             setAccountData(prev => ({
               ...prev,
@@ -120,7 +126,7 @@ export default function SettingsPage() {
             }))
           }
         } else {
-          console.warn('❌ [Settings] Failed to load studio data from API')
+          console.warn('❌ [Settings] Failed to load studio data - Status:', response.status)
           // Set defaults with user data
           setAccountData(prev => ({
             ...prev,
@@ -139,12 +145,13 @@ export default function SettingsPage() {
           email: user.email || ''
         }))
       } finally {
+        console.timeEnd('loadSettingsData'); // end performance timing
         setLoading(false)
       }
     }
 
     loadStudioData()
-  }, [user])
+  }, [user?.id]) // optimized dependency array to prevent unnecessary rerenders
 
   // Image upload handler
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -152,10 +159,12 @@ export default function SettingsPage() {
     if (!file) return
 
     try {
+      console.time('imageUploadProcess'); // added performance timing
       console.log('📤 [Settings] Starting image upload:', file.name, file.size)
       
       // Validate file size (max 1MB)
       if (file.size > 1024 * 1024) {
+        console.timeEnd('imageUploadProcess'); // end timing on early return
         toast({
           title: "File Too Large",
           description: "Please select an image smaller than 1MB",
@@ -166,6 +175,7 @@ export default function SettingsPage() {
 
       // Validate file type
       if (!file.type.startsWith('image/')) {
+        console.timeEnd('imageUploadProcess'); // end timing on early return
         toast({
           title: "Invalid File Type",
           description: "Please select a valid image file",
@@ -174,63 +184,76 @@ export default function SettingsPage() {
         return
       }
 
-      // Create image element for compression
-      const img = new Image()
-      const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('2d')
+      // Use Promise for better async handling
+      const compressedImage = await new Promise<string>((resolve, reject) => {
+        const img = new Image()
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
 
-      img.onload = () => {
-        // Calculate new dimensions (max 400x400)
-        const maxSize = 400
-        let { width, height } = img
-        
-        if (width > height) {
-          if (width > maxSize) {
-            height = (height * maxSize) / width
-            width = maxSize
-          }
-        } else {
-          if (height > maxSize) {
-            width = (width * maxSize) / height
-            height = maxSize
+        img.onload = () => {
+          try {
+            // Calculate new dimensions (max 400x400)
+            const maxSize = 400
+            let { width, height } = img
+            
+            if (width > height) {
+              if (width > maxSize) {
+                height = (height * maxSize) / width
+                width = maxSize
+              }
+            } else {
+              if (height > maxSize) {
+                width = (width * maxSize) / height
+                height = maxSize
+              }
+            }
+
+            // Set canvas dimensions and draw image
+            canvas.width = width
+            canvas.height = height
+            ctx?.drawImage(img, 0, 0, width, height)
+
+            // Convert to base64 with compression
+            const result = canvas.toDataURL('image/jpeg', 0.8)
+            
+            console.log('🖼️ [Settings] Image compressed:', {
+              originalSize: file.size,
+              compressedSize: result.length,
+              dimensions: `${width}x${height}`
+            })
+            
+            resolve(result)
+          } catch (error) {
+            reject(error)
           }
         }
 
-        // Set canvas dimensions and draw image
-        canvas.width = width
-        canvas.height = height
-        ctx?.drawImage(img, 0, 0, width, height)
+        img.onerror = () => reject(new Error('Failed to load image'))
 
-        // Convert to base64 with compression
-        const compressedImage = canvas.toDataURL('image/jpeg', 0.8)
-        
-        console.log('🖼️ [Settings] Image compressed:', {
-          originalSize: file.size,
-          compressedSize: compressedImage.length,
-          dimensions: `${width}x${height}`
-        })
+        // Load the image
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          img.src = e.target?.result as string
+        }
+        reader.onerror = () => reject(new Error('Failed to read file'))
+        reader.readAsDataURL(file)
+      })
 
-        // Update account data with new image
-        setAccountData(prev => ({
-          ...prev,
-          profileImage: compressedImage
-        }))
+      // Update account data with new image
+      setAccountData(prev => ({
+        ...prev,
+        profileImage: compressedImage
+      }))
 
-        toast({
-          title: "Image Uploaded",
-          description: "Profile image uploaded successfully. Remember to save your changes.",
-          variant: "default"
-        })
-      }
-
-      // Load the image
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        img.src = e.target?.result as string
-      }
-      reader.readAsDataURL(file)
+      console.timeEnd('imageUploadProcess'); // end timing after successful processing
+      toast({
+        title: "Image Uploaded",
+        description: "Profile image uploaded successfully. Remember to save your changes.",
+        variant: "default"
+      })
 
     } catch (error) {
+      console.timeEnd('imageUploadProcess'); // end timing on error
       console.error('❌ [Settings] Error uploading image:', error)
       toast({
         title: "Upload Error",
@@ -243,16 +266,17 @@ export default function SettingsPage() {
   const handleSaveAccount = async () => {
     try {
       setSaving(true)
-      console.log('💾 [Settings] Saving account data...')
+      console.time('saveAccountData'); // start performance timing
+      console.log('💾 [Settings] Starting save process')
 
       // Validate required fields
       if (!accountData.studioName.trim()) {
+        console.log('❌ [Settings] Validation failed: Studio name required')
         toast({
           title: "Validation Error",
           description: "Studio name is required",
           variant: "destructive"
         })
-        setSaving(false)
         return
       }
 
@@ -267,19 +291,19 @@ export default function SettingsPage() {
         owner: user?.email || user?.id
       }
 
-      console.log('📤 [Settings] Sending account data to API:', {
-        name: studioApiData.name,
-        email: studioApiData.email,
-        hasProfileImage: !!studioApiData.profileImage
-      })
-
-      // Save to API
-      const response = await fetch(`${API_BASE_URL}/api/studios`, {
+      console.log('📤 [Settings] Sending account data to API')
+      
+      // Construct and log the URL being used
+      const studiosUrl = `${API_BASE_URL}/api/studios`
+      
+      const response = await fetch(studiosUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(studioApiData),
+        // Add timeout for better performance
+        signal: AbortSignal.timeout(15000), // 15 second timeout for uploads
       })
 
       if (response.ok) {
@@ -293,11 +317,11 @@ export default function SettingsPage() {
         })
       } else {
         const errorData = await response.text()
-        console.error('❌ [Settings] Failed to save account data:', response.status, errorData)
+        console.error('❌ [Settings] Failed to save account data:', response.status, response.statusText)
         
         toast({
           title: "Save Failed",
-          description: "Failed to save account settings. Please try again.",
+          description: `Failed to save account settings (${response.status}). Please try again.`,
           variant: "destructive"
         })
       }
@@ -309,6 +333,7 @@ export default function SettingsPage() {
         variant: "destructive"
       })
     } finally {
+      console.timeEnd('saveAccountData'); // end performance timing
       setSaving(false)
     }
   }

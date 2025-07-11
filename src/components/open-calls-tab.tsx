@@ -33,20 +33,25 @@ import { useToast } from '@/hooks/use-toast'
 
 interface OpenCall {
   id: string
-  postedById: string
-  postedByType: 'user' | 'studio'
-  postedByName: string
-  postedByImage: string
+  createdBy: string
+  userType: 'artist' | 'studio'
+  posterName: string
   role: string
   description: string
   genre?: string
+  timestamp: string
+  // Legacy fields for backward compatibility
+  postedById?: string
+  postedByType?: 'user' | 'studio'
+  postedByName?: string
+  postedByImage?: string
   location?: string
   budget?: string
   deadline?: string
-  contactEmail: string
-  status: string
-  createdAt: string
-  applicants: Array<{
+  contactEmail?: string
+  status?: string
+  createdAt?: string
+  applicants?: Array<{
     userId: string
     userName: string
     userEmail: string
@@ -97,15 +102,22 @@ export default function OpenCallsTab({ userType, userId, studioId }: OpenCallsTa
 
   const fetchOpenCalls = async () => {
     try {
+      console.log("Fetching from:", `${API_BASE_URL}/api/open-calls`)
       const response = await fetch(`${API_BASE_URL}/api/open-calls`)
-      const data = await response.json()
+      
       if (response.ok) {
-        setOpenCalls(data.openCalls || [])
+        const data = await response.json()
+        // API returns array directly, not wrapped in openCalls property
+        setOpenCalls(Array.isArray(data) ? data : [])
       } else {
-        console.error('Failed to fetch open calls:', data.error)
+        // Handle case where endpoint doesn't exist (404) or other errors
+        console.log('Open calls endpoint not available, using empty data')
+        setOpenCalls([])
       }
     } catch (error) {
-      console.error('Error fetching open calls:', error)
+      // Handle network errors or missing endpoint gracefully
+      console.log('Open calls feature not available yet')
+      setOpenCalls([])
     } finally {
       setLoading(false)
     }
@@ -119,7 +131,7 @@ export default function OpenCallsTab({ userType, userId, studioId }: OpenCallsTa
       filtered = filtered.filter(call =>
         call.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
         call.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        call.postedByName.toLowerCase().includes(searchTerm.toLowerCase())
+        (call.posterName || call.postedByName || '').toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
 
@@ -152,11 +164,15 @@ export default function OpenCallsTab({ userType, userId, studioId }: OpenCallsTa
 
     setIsCreating(true)
     try {
-      // Automatically determine postedById and postedByType from auth context
-      const actualPostedById = userType === 'studio' ? studioId : userId
-      const actualPostedByType = userType === 'studio' ? 'studio' : 'user'
+      // For studios, use the actual user ID, not studio ID
+      let actualCreatedBy = userId;
+      
+      if (userType === 'studio') {
+        // Use the authenticated user's ID (not studioId)
+        actualCreatedBy = userId;
+      }
 
-      if (!actualPostedById) {
+      if (!actualCreatedBy) {
         toast({
           title: "Authentication Error",
           description: "Unable to identify user. Please try logging in again.",
@@ -172,8 +188,8 @@ export default function OpenCallsTab({ userType, userId, studioId }: OpenCallsTa
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          postedById: actualPostedById,
-          postedByType: actualPostedByType,
+          createdBy: actualCreatedBy,
+          userType: userType,
           role: createForm.role,
           description: createForm.description,
           genre: createForm.genre || undefined,
@@ -183,9 +199,8 @@ export default function OpenCallsTab({ userType, userId, studioId }: OpenCallsTa
         })
       })
 
-      const data = await response.json()
-
       if (response.ok) {
+        const newOpenCall = await response.json()
         toast({
           title: "Open Call Posted!",
           description: "Your open call has been published successfully.",
@@ -199,19 +214,26 @@ export default function OpenCallsTab({ userType, userId, studioId }: OpenCallsTa
           budget: '',
           deadline: ''
         })
-        fetchOpenCalls() // Refresh the list
+        
+        // Add the new open call to the existing list immediately
+        setOpenCalls(prevCalls => [newOpenCall, ...prevCalls])
+        
+        // Also refresh from server to ensure consistency
+        await fetchOpenCalls()
       } else {
+        // Handle API errors
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
         toast({
-          title: "Failed to Post",
-          description: data.error || "Failed to post open call. Please try again.",
+          title: "Error Creating Open Call",
+          description: errorData.error || "Failed to create open call. Please try again.",
           variant: "destructive"
         })
       }
     } catch (error) {
-      console.error('Error posting open call:', error)
+      console.error('Error creating open call:', error)
       toast({
-        title: "Error",
-        description: "Failed to post open call. Please try again.",
+        title: "Network Error",
+        description: "Failed to connect to the server. Please check your connection and try again.",
         variant: "destructive"
       })
     } finally {
@@ -242,9 +264,8 @@ export default function OpenCallsTab({ userType, userId, studioId }: OpenCallsTa
         })
       })
 
-      const data = await response.json()
-
       if (response.ok) {
+        const data = await response.json()
         toast({
           title: "Application Submitted!",
           description: "Your application has been sent successfully.",
@@ -253,17 +274,19 @@ export default function OpenCallsTab({ userType, userId, studioId }: OpenCallsTa
         setApplicationMessage('')
         fetchOpenCalls() // Refresh to show updated applicant count
       } else {
+        // Handle API errors
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
         toast({
-          title: "Application Failed",
-          description: data.error || "Failed to submit application. Please try again.",
+          title: "Error Submitting Application",
+          description: errorData.error || "Failed to submit application. Please try again.",
           variant: "destructive"
         })
       }
     } catch (error) {
-      console.error('Error applying to open call:', error)
+      console.error('Error submitting application:', error)
       toast({
-        title: "Error",
-        description: "Failed to submit application. Please try again.",
+        title: "Network Error",
+        description: "Failed to connect to the server. Please check your connection and try again.",
         variant: "destructive"
       })
     } finally {
@@ -307,117 +330,121 @@ export default function OpenCallsTab({ userType, userId, studioId }: OpenCallsTa
 
   // Generate profile link based on poster type
   const getProfileLink = (call: OpenCall) => {
-    if (call.postedByType === 'studio') {
-      return `/studio/${call.postedById}`
+    const posterType = call.userType || call.postedByType
+    const posterId = call.createdBy || call.postedById
+    
+    if (posterType === 'studio') {
+      return `/studio/${posterId}`
     } else {
-      return `/artist/${call.postedById}`
+      return `/artist/${posterId}`
     }
   }
 
   return (
     <div className="space-y-6">
-      {/* Header with Create Button (only for studios) */}
+      {/* Header with Create Button (for both studios and artists) */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Open Calls</h2>
           <p className="text-muted-foreground">
             {userType === 'studio' 
               ? 'Post and manage your open calls for collaborations'
-              : 'Discover and apply to exciting collaboration opportunities'
+              : 'Discover collaboration opportunities and post your own open calls'
             }
           </p>
         </div>
         
-        {userType === 'studio' && (
-          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Post Open Call
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Create Open Call</DialogTitle>
-                <DialogDescription>
-                  Post a new collaboration opportunity for artists
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="role">Role/Position *</Label>
-                  <Input
-                    id="role"
-                    placeholder="e.g., Vocalist, Guitarist, Producer"
-                    value={createForm.role}
-                    onChange={(e) => setCreateForm(prev => ({ ...prev, role: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="description">Description *</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Describe what you're looking for..."
-                    value={createForm.description}
-                    onChange={(e) => setCreateForm(prev => ({ ...prev, description: e.target.value }))}
-                    rows={3}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="genre">Genre</Label>
-                  <Input
-                    id="genre"
-                    placeholder="e.g., Hip-Hop, Rock, Pop"
-                    value={createForm.genre}
-                    onChange={(e) => setCreateForm(prev => ({ ...prev, genre: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    placeholder="e.g., Los Angeles, CA"
-                    value={createForm.location}
-                    onChange={(e) => setCreateForm(prev => ({ ...prev, location: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="budget">Budget</Label>
-                  <Input
-                    id="budget"
-                    placeholder="e.g., $500-1000, Negotiable"
-                    value={createForm.budget}
-                    onChange={(e) => setCreateForm(prev => ({ ...prev, budget: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="deadline">Deadline</Label>
-                  <Input
-                    id="deadline"
-                    type="date"
-                    value={createForm.deadline}
-                    onChange={(e) => setCreateForm(prev => ({ ...prev, deadline: e.target.value }))}
-                  />
-                </div>
+        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Post Open Call
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Create Open Call</DialogTitle>
+              <DialogDescription>
+                {userType === 'studio' 
+                  ? 'Post a new collaboration opportunity for artists'
+                  : 'Post a collaboration opportunity or find partners'
+                }
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="role">Role/Position *</Label>
+                <Input
+                  id="role"
+                  placeholder="e.g., Vocalist, Guitarist, Producer"
+                  value={createForm.role}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, role: e.target.value }))}
+                />
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleCreateOpenCall} disabled={isCreating}>
-                  {isCreating ? (
-                    <>Creating...</>
-                  ) : (
-                    <>
-                      <Send className="mr-2 h-4 w-4" />
-                      Post Open Call
-                    </>
-                  )}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        )}
+              <div>
+                <Label htmlFor="description">Description *</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Describe what you're looking for..."
+                  value={createForm.description}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, description: e.target.value }))}
+                  rows={3}
+                />
+              </div>
+              <div>
+                <Label htmlFor="genre">Genre</Label>
+                <Input
+                  id="genre"
+                  placeholder="e.g., Hip-Hop, Rock, Pop"
+                  value={createForm.genre}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, genre: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="location">Location</Label>
+                <Input
+                  id="location"
+                  placeholder="e.g., Los Angeles, CA"
+                  value={createForm.location}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, location: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="budget">Budget</Label>
+                <Input
+                  id="budget"
+                  placeholder="e.g., $500-1000, Negotiable"
+                  value={createForm.budget}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, budget: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="deadline">Deadline</Label>
+                <Input
+                  id="deadline"
+                  type="date"
+                  value={createForm.deadline}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, deadline: e.target.value }))}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreateOpenCall} disabled={isCreating}>
+                {isCreating ? (
+                  <>Creating...</>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Post Open Call
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Filters */}
@@ -499,9 +526,7 @@ export default function OpenCallsTab({ userType, userId, studioId }: OpenCallsTa
                   <p className="text-muted-foreground">
                     {searchTerm || roleFilter !== 'all' || genreFilter !== 'all'
                       ? 'Try adjusting your filters to see more results.'
-                      : userType === 'studio' 
-                        ? 'Be the first to post an open call!'
-                        : 'Check back later for new opportunities.'}
+                      : 'Be the first to post an open call!'}
                   </p>
                 </div>
               </div>
@@ -514,19 +539,19 @@ export default function OpenCallsTab({ userType, userId, studioId }: OpenCallsTa
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={call.postedByImage} alt={call.postedByName} />
+                      <AvatarImage src={call.postedByImage} alt={call.posterName || call.postedByName} />
                       <AvatarFallback>
-                        {call.postedByType === 'studio' ? <Building2 className="h-4 w-4" /> : <User className="h-4 w-4" />}
+                        {(call.userType || call.postedByType) === 'studio' ? <Building2 className="h-4 w-4" /> : <User className="h-4 w-4" />}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <div className="font-medium">{call.postedByName}</div>
+                      <div className="font-medium">{call.posterName || call.postedByName}</div>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        {call.postedByType === 'studio' ? <Building2 className="h-3 w-3" /> : <User className="h-3 w-3" />}
-                        <span className="capitalize">{call.postedByType}</span>
+                        {(call.userType || call.postedByType) === 'studio' ? <Building2 className="h-3 w-3" /> : <User className="h-3 w-3" />}
+                        <span className="capitalize">{call.userType || call.postedByType}</span>
                         <span>•</span>
                         <Clock className="h-3 w-3" />
-                        <span>{getTimeAgo(call.createdAt)}</span>
+                        <span>{getTimeAgo(call.timestamp || call.createdAt || '')}</span>
                       </div>
                     </div>
                   </div>
@@ -578,7 +603,8 @@ export default function OpenCallsTab({ userType, userId, studioId }: OpenCallsTa
                 )}
 
                 <div className="flex gap-2 pt-2">
-                  {userType === 'artist' && (
+                  {/* Show apply button to all users except the poster */}
+                  {(call.createdBy || call.postedById) !== (userType === 'studio' ? studioId : userId) && (
                     <Dialog>
                       <DialogTrigger asChild>
                         <Button 
@@ -600,7 +626,7 @@ export default function OpenCallsTab({ userType, userId, studioId }: OpenCallsTa
                             <div className="space-y-2">
                               <h4 className="font-medium">{selectedCall.role}</h4>
                               <p className="text-sm text-muted-foreground">
-                                Posted by {selectedCall.postedByName}
+                                Posted by {selectedCall.posterName || selectedCall.postedByName}
                               </p>
                             </div>
                             <div>

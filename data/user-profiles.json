@@ -1,0 +1,34 @@
+[
+  {
+    "id": "user_1751923639581_nmkeljd3x",
+    "name": "Lil Ryry",
+    "email": "ryanconnolly987@gmail.com",
+    "role": "rapper",
+    "bio": "Upcoming rapper from Atlanta, working on my debut mixtape. Love trap beats and melodic flows.",
+    "location": "Atlanta, GA",
+    "website": "",
+    "trackUrl": "https://www.youtube.com/watch?v=4qvyhd8MyJE",
+    "profileImage": "/uploads/avatars/avatar_user_1751923639581_nmkeljd3x_1751923664114.PNG",
+    "bannerImage": "/uploads/banners/banner_user_1751923639581_nmkeljd3x_1751923658910.png",
+    "projectHighlights": [
+      {
+        "id": "highlight-1751923679290",
+        "title": "Got hella bitches",
+        "description": "i got hella bitches once"
+      }
+    ],
+    "socialMedia": {
+      "instagram": "@prod_ryry",
+      "twitter": "",
+      "youtube": "",
+      "spotify": ""
+    },
+    "genres": [
+      "Hip Hop",
+      "Trap",
+      "R&B"
+    ],
+    "experience": "intermediate",
+    "createdAt": "2025-07-07T21:27:19.581Z"
+  }
+]

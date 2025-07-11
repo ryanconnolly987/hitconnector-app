@@ -36,75 +36,54 @@ interface BookingDetails {
   approvedAt?: string
 }
 
-export default function BookingDetailsPage() {
-  const params = useParams()
-  const router = useRouter()
+export default async function BookingDetailsPage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
+  const { id: bookingId } = await params
+  
+  return <BookingDetailsPageClient bookingId={bookingId} />
+}
+
+function BookingDetailsPageClient({ bookingId }: { bookingId: string }) {
   const { user } = useAuth()
   const { toast } = useToast()
-  
+  const router = useRouter()
   const [booking, setBooking] = useState<BookingDetails | null>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
-
-  const bookingId = params.id as string
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchBookingDetails()
-  }, [bookingId])
-
-  const fetchBookingDetails = async () => {
-    try {
-      setLoading(true)
-      
-      // Try fetching as a booking first
-      const bookingsResponse = await fetch(`${API_BASE_URL}/api/bookings/${bookingId}`)
-      if (bookingsResponse.ok) {
-        const bookingData = await bookingsResponse.json()
-        setBooking(bookingData)
-        return
-      }
-      
-      // If not found in bookings, try booking requests
-      const studiosResponse = await fetch(`${API_BASE_URL}/api/studios`)
-      if (studiosResponse.ok) {
-        const studiosData = await studiosResponse.json()
-        const userStudios = studiosData.studios.filter((studio: any) => 
-          studio.owner === user?.email || studio.owner === user?.id
-        )
+    const fetchBookingDetails = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch(`${API_BASE_URL}/api/bookings/${bookingId}`)
         
-        // Search through all booking requests for user's studios
-        for (const studio of userStudios) {
-          const requestsResponse = await fetch(`${API_BASE_URL}/api/booking-requests?studioId=${studio.id}`)
-          if (requestsResponse.ok) {
-            const requestsData = await requestsResponse.json()
-            const foundRequest = requestsData.bookingRequests?.find((req: any) => req.id === bookingId)
-            if (foundRequest) {
-              setBooking(foundRequest)
-              return
-            }
-          }
+        if (!response.ok) {
+          throw new Error('Booking not found')
         }
+        
+        const bookingData = await response.json()
+        setBooking(bookingData)
+      } catch (error) {
+        console.error('Error fetching booking details:', error)
+        setError('Failed to load booking details')
+        toast({
+          title: "Error",
+          description: "Failed to load booking details",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
       }
-      
-      // If still not found, show error
-      toast({
-        title: "Booking Not Found",
-        description: "The requested booking could not be found.",
-        variant: "destructive"
-      })
-      router.push('/studio-dashboard/bookings')
-      
-    } catch (error) {
-      console.error('Error fetching booking details:', error)
-      toast({
-        title: "Error",
-        description: "Failed to load booking details. Please try again.",
-        variant: "destructive"
-      })
-    } finally {
-      setLoading(false)
     }
-  }
+
+    if (bookingId) {
+      fetchBookingDetails()
+    }
+  }, [bookingId, toast])
 
   const handleBookingAction = async (action: 'approve' | 'reject' | 'cancel') => {
     if (!booking) return

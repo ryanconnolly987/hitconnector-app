@@ -76,6 +76,7 @@ export default function BookingsPage() {
   const fetchBookingRequests = async () => {
     setLoading(true)
     try {
+      console.time('fetchBookings');
       const response = await fetch(`${API_BASE_URL}/api/booking-requests`)
       if (!response.ok) {
         throw new Error('Failed to fetch booking requests')
@@ -83,7 +84,6 @@ export default function BookingsPage() {
       const data = await response.json()
       console.log('📥 [Bookings] Raw booking requests data:', data)
       
-      // Validate and filter out any booking requests without valid IDs
       const validBookingRequests = (data.bookingRequests || []).filter((request: any) => {
         if (!request.id) {
           console.warn('⚠️ [Bookings] Found booking request without ID:', request)
@@ -94,13 +94,11 @@ export default function BookingsPage() {
       
       setBookingRequests(validBookingRequests)
       
-      // Also fetch confirmed bookings
       const bookingsResponse = await fetch(`${API_BASE_URL}/api/bookings`)
       if (bookingsResponse.ok) {
         const bookingsData = await bookingsResponse.json()
         console.log('📥 [Bookings] Raw bookings data:', bookingsData)
         
-        // Validate and filter out any bookings without valid IDs
         const validBookings = (bookingsData.bookings || []).filter((booking: any) => {
           if (!booking.id) {
             console.warn('⚠️ [Bookings] Found booking without ID:', booking)
@@ -111,10 +109,12 @@ export default function BookingsPage() {
         
         setConfirmedBookings(validBookings)
       }
+      console.timeEnd('fetchBookings');
     } catch (error) {
       console.error('❌ [Bookings] Error fetching booking requests:', error)
       setBookingRequests([])
       setConfirmedBookings([])
+      console.timeEnd('fetchBookings');
     } finally {
       setLoading(false)
     }
@@ -122,10 +122,12 @@ export default function BookingsPage() {
 
   useEffect(() => {
     fetchBookingRequests()
-  }, [toast, user])
+  }, [])
 
   const handleBookingAction = async (requestId: string, action: 'approve' | 'reject') => {
     try {
+      console.log(`📋 [Bookings] ${action}ing booking request:`, requestId)
+      
       const response = await fetch(`${API_BASE_URL}/api/booking-requests/${requestId}`, {
         method: 'PUT',
         headers: {
@@ -138,7 +140,6 @@ export default function BookingsPage() {
         const result = await response.json()
         
         if (action === 'approve') {
-          // Remove from requests and add to confirmed bookings
           setBookingRequests(prev => prev.filter(req => req.id !== requestId))
           if (result.booking) {
             setConfirmedBookings(prev => [...prev, result.booking])
@@ -148,7 +149,6 @@ export default function BookingsPage() {
             description: "The booking request has been approved and added to your calendar."
           })
         } else {
-          // Update status in requests
           setBookingRequests(prev => 
             prev.map(req => 
               req.id === requestId 
@@ -188,14 +188,12 @@ export default function BookingsPage() {
 
       if (response.ok) {
         if (isRequest) {
-          // Remove from booking requests
           setBookingRequests(prev => prev.filter(req => req.id !== bookingId))
           toast({
             title: "Request Cancelled",
             description: "The booking request has been cancelled."
           })
         } else {
-          // Update status in confirmed bookings
           setConfirmedBookings(prev => 
             prev.map(booking => 
               booking.id === bookingId 
@@ -244,7 +242,6 @@ export default function BookingsPage() {
   const upcomingBookings = confirmedBookings.filter(b => b.status === "confirmed" && new Date(b.date) >= new Date())
   const pastBookings = confirmedBookings.filter(b => b.status === "completed" || new Date(b.date) < new Date())
 
-  // Debug logging for React key issues
   console.log('🔍 [Bookings] Rendering with data:', {
     pendingCount: pendingBookings.length,
     upcomingCount: upcomingBookings.length,
@@ -287,7 +284,6 @@ export default function BookingsPage() {
           </div>
         </div>
 
-        {/* Search and Filter */}
         <Card>
           <CardContent className="pt-6">
             <div className="flex flex-col sm:flex-row gap-4">
@@ -319,7 +315,6 @@ export default function BookingsPage() {
           </CardContent>
         </Card>
 
-        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">

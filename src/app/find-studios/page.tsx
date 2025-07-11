@@ -53,8 +53,8 @@ interface Studio {
     id: string
     name: string
     role: string
-    bio: string
-    image: string
+    experience: string
+    profileImage: string
   }>
   createdAt: string
   owner: string
@@ -77,24 +77,28 @@ export default function FindStudiosPage() {
 
   // Add a simple connection test
   useEffect(() => {
-    console.log('🔧 Testing basic fetch capabilities...')
-    fetch('http://localhost:3002/health')
-      .then(response => {
-        console.log('🟢 Health check response:', response.status)
-        return response.text()
+    console.log('🧪 Testing basic fetch capabilities...');
+    fetch('/api/health')
+      .then((response) => {
+        console.log('🟢 Health check response:', response.status);
+        return response.text();
       })
-      .then(text => console.log('🟢 Health check text:', text))
-      .catch(err => console.error('🔴 Health check failed:', err))
+      .catch((err) => {
+        console.warn('🟠 Health check failed (non-blocking):', err.message);
+      });
   }, [])
 
   const fetchStudios = async () => {
     try {
+      console.time('fetchFindStudios'); // added performance timing
       console.log('🎯 Starting fetchStudios...')
       setLoading(true)
       setError(null)
       
-      console.log('🔗 Making request to:', `${API_BASE_URL}/api/studios`)
-      const response = await fetch(`${API_BASE_URL}/api/studios`)
+      // Use relative path for better performance
+      const studiosUrl = '/api/studios'
+      console.log('🔗 Making request to:', studiosUrl)
+      const response = await fetch(studiosUrl)
       console.log('📡 Response received:', response.status, response.ok)
       
       if (response.ok) {
@@ -108,9 +112,11 @@ export default function FindStudiosPage() {
         console.error('❌ Response not OK:', response.status, response.statusText)
         throw new Error('Failed to fetch studios')
       }
+      console.timeEnd('fetchFindStudios'); // added performance timing
     } catch (err) {
       console.error('🚨 Error fetching studios:', err)
       setError('Failed to load studios. Please try again.')
+      console.timeEnd('fetchFindStudios'); // added performance timing
     } finally {
       console.log('🏁 Setting loading to false')
       setLoading(false)
@@ -346,12 +352,13 @@ export default function FindStudiosPage() {
                       </div>
 
                       <div className="flex flex-wrap gap-1">
-                        {studio.specialties.slice(0, 3).map((specialty) => (
+                        {Array.isArray(studio.specialties) &&
+                          studio.specialties.slice(0, 3).map((specialty) => (
                           <Badge key={specialty} variant="outline" className="text-xs">
                             {specialty}
                           </Badge>
                         ))}
-                        {studio.specialties.length > 3 && (
+                        {Array.isArray(studio.specialties) && studio.specialties.length > 3 && (
                           <Badge variant="outline" className="text-xs">
                             +{studio.specialties.length - 3}
                           </Badge>

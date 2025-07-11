@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuth } from '@/lib/auth'
 import { useToast } from '@/hooks/use-toast'
+import { API_BASE_URL } from '@/lib/config'
 import { ArrowLeft, Megaphone, MapPin, DollarSign, Calendar, Mail } from 'lucide-react'
 import Link from 'next/link'
 
@@ -76,7 +77,7 @@ export default function NewOpenCallPage() {
 
     setIsSubmitting(true)
     try {
-      const response = await fetch('http://localhost:3002/api/open-calls', {
+      const response = await fetch(`${API_BASE_URL}/api/open-calls`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -94,8 +95,6 @@ export default function NewOpenCallPage() {
         })
       })
 
-      const data = await response.json()
-
       if (response.ok) {
         toast({
           title: "Open Call Posted!",
@@ -103,17 +102,19 @@ export default function NewOpenCallPage() {
         })
         router.push('/open-calls')
       } else {
+        // Handle API errors
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
         toast({
-          title: "Failed to Post",
-          description: data.error || "Failed to post open call. Please try again.",
+          title: "Error Creating Open Call",
+          description: errorData.error || "Failed to create open call. Please try again.",
           variant: "destructive"
         })
       }
     } catch (error) {
-      console.error('Error posting open call:', error)
+      console.error('Error creating open call:', error)
       toast({
-        title: "Error",
-        description: "Failed to post open call. Please try again.",
+        title: "Network Error",
+        description: "Failed to connect to the server. Please check your connection and try again.",
         variant: "destructive"
       })
     } finally {

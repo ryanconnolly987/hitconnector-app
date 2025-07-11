@@ -1,0 +1,20 @@
+[
+  {
+    "id": "user_1751923639581_nmkeljd3x",
+    "email": "ryanconnolly987@gmail.com",
+    "passwordHash": "$2b$12$MMKNjXfuavu2Iuhx2myQtOAyuZ.5/iALAdpgNnDPzPrZo7RLcAT7W",
+    "name": "Lil Ryry",
+    "role": "rapper",
+    "createdAt": "2025-07-07T21:27:19.581Z",
+    "stripeCustomerId": "cus_SdfCAqoJCV7U4L"
+  },
+  {
+    "id": "user_1751923766253_jbsdq2dgn",
+    "email": "ryanconnolly987@g.ucla.edu",
+    "passwordHash": "$2b$12$OkM5lBL0pfE8D6Tp9tMej.e3WXtPNKRkzrkayEzZbb7c9vHL0M.wa",
+    "name": "Ryan Connolly",
+    "role": "studio",
+    "createdAt": "2025-07-07T21:29:26.253Z",
+    "studioId": "studio_1751923766253_c0ifwgy6o"
+  }
+]

@@ -24,7 +24,7 @@ export function ImageUpload({
   onImageUpload,
   userId,
   type,
-  aspectRatio = type === 'banner' ? 'aspect-[16/9]' : 'aspect-square',
+  aspectRatio = type === 'banner' ? 'aspect-[3/1]' : 'aspect-square',
   placeholder,
   maxSizeMB = 5
 }: ImageUploadProps) {
@@ -69,22 +69,15 @@ export function ImageUpload({
       setUploading(true)
       setError(null)
 
-      // Convert file to base64
-      const reader = new FileReader()
-      reader.onload = async (e) => {
-        const base64Data = e.target?.result as string
+      // Create FormData for proper file upload
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('userId', userId)
 
-        try {
           const endpoint = type === 'banner' ? '/api/upload/banner' : '/api/upload/avatar'
           const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              image: base64Data,
-              userId: userId
-            })
+        body: formData
           })
 
           if (!response.ok) {
@@ -100,14 +93,6 @@ export function ImageUpload({
           setError(error instanceof Error ? error.message : 'Upload failed')
           setPreview(currentImage || null)
         } finally {
-          setUploading(false)
-        }
-      }
-
-      reader.readAsDataURL(file)
-    } catch (error) {
-      console.error('File processing error:', error)
-      setError('Failed to process file')
       setUploading(false)
     }
   }
@@ -124,12 +109,15 @@ export function ImageUpload({
     fileInputRef.current?.click()
   }
 
+  // Determine container height based on type
+  const containerHeight = type === 'banner' ? 'h-[250px]' : 'h-64'
+
   return (
     <div className="space-y-4">
       <Label>{label}</Label>
       
-      {/* Preview Area */}
-      <div className={`relative w-full ${aspectRatio} border-2 border-dashed border-muted-foreground/25 rounded-lg overflow-hidden bg-muted/50`}>
+      {/* Preview Area - Improved layout for better balance */}
+      <div className={`relative w-full max-w-3xl mx-auto ${containerHeight} border-2 border-dashed border-muted-foreground/25 rounded-lg overflow-hidden bg-muted/50`}>
         {preview ? (
           <>
             <img
@@ -194,7 +182,7 @@ export function ImageUpload({
           variant="outline"
           onClick={triggerFileSelect}
           disabled={uploading}
-          className="w-full"
+          className="w-full max-w-3xl mx-auto"
         >
           <Upload className="mr-2 h-4 w-4" />
           {uploading ? 'Uploading...' : `Upload ${label}`}

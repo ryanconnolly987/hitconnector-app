@@ -34,32 +34,66 @@ interface ProjectHighlight {
   description: string
 }
 
+interface BillingTransaction {
+  id: string
+  studioName: string
+  amount: number
+  date: string
+  createdAt: string
+  description: string
+  paymentMethodLast4: string
+}
+
+interface ProfileData {
+  name: string
+  email: string
+  phone: string
+  bio: string
+  location: string
+  website: string
+  experience: string
+  genres: string[]
+  profileImage: string
+  bannerImage: string
+  trackUrl: string
+  projectHighlights: ProjectHighlight[]
+  socialMedia: {
+    instagram: string
+    twitter: string
+    youtube: string
+    spotify: string
+  }
+}
+
 export default function SettingsPage() {
-  const { user } = useAuth()
+  const { user, updateUser } = useAuth()
   const { toast } = useToast()
   const [showPassword, setShowPassword] = useState(false)
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [billingTransactions, setBillingTransactions] = useState<BillingTransaction[]>([])
+  const [loadingTransactions, setLoadingTransactions] = useState(false)
 
   // Form states
-  const [profileData, setProfileData] = useState({
-    name: user?.name || "",
-    email: user?.email || "",
-    bio: "Upcoming rapper from Atlanta, working on my debut mixtape. Love trap beats and melodic flows.",
-    location: "Atlanta, GA",
-    website: "",
-    trackUrl: "",
-    profileImage: "",
-    bannerImage: "",
-    projectHighlights: [] as ProjectHighlight[],
+  const [profileData, setProfileData] = useState<ProfileData>({
+    name: '',
+    email: '',
+    phone: '',
+    bio: '',
+    location: '',
+    website: '',
+    experience: '',
+    genres: [],
+    profileImage: '',
+    bannerImage: '',
+    trackUrl: '',
+    projectHighlights: [],
     socialMedia: {
-      instagram: "@johnrapper",
-      twitter: "@johnrapper",
-      youtube: "John Rapper Official",
-      spotify: "John Rapper",
-    },
-    genres: ["Hip Hop", "Trap", "R&B"],
-    experience: "intermediate",
+      instagram: '',
+      twitter: '',
+      youtube: '',
+      spotify: '',
+    }
   })
 
   const [notificationSettings, setNotificationSettings] = useState({
@@ -82,27 +116,32 @@ export default function SettingsPage() {
   // Load profile data on mount
   useEffect(() => {
     const loadProfileData = async () => {
-      if (!user?.id) return
+      if (!user) return
       
       try {
         const response = await fetch(`${API_BASE_URL}/api/users/${user.id}`)
         if (response.ok) {
           const userData = await response.json()
-          setProfileData(prev => ({
-            ...prev,
-            name: userData.name || user.name || "",
-            email: userData.email || user.email || "",
-            bio: userData.bio || prev.bio,
-            location: userData.location || prev.location,
-            website: userData.website || prev.website,
-            trackUrl: userData.trackUrl || "",
-            profileImage: userData.profileImage || "",
-            bannerImage: userData.bannerImage || "",
+          setProfileData({
+            name: userData.name || '',
+            email: userData.email || '',
+            phone: userData.phone || '',
+            bio: userData.bio || '',
+            location: userData.location || '',
+            website: userData.website || '',
+            experience: userData.experience || '',
+            genres: userData.genres || [],
+            profileImage: userData.profileImage || '',
+            bannerImage: userData.bannerImage || '',
+            trackUrl: userData.trackUrl || '',
             projectHighlights: userData.projectHighlights || [],
-            socialMedia: userData.socialMedia || prev.socialMedia,
-            genres: userData.genres || prev.genres,
-            experience: userData.experience || prev.experience,
-          }))
+            socialMedia: userData.socialMedia || {
+              instagram: '',
+              twitter: '',
+              youtube: '',
+              spotify: '',
+            }
+          })
         }
       } catch (error) {
         console.error('Error loading profile data:', error)
@@ -112,15 +151,30 @@ export default function SettingsPage() {
     loadProfileData()
   }, [user])
 
-  const handleProfileUpdate = async () => {
-    if (!user?.id) {
-      toast({
-        title: "Error",
-        description: "User not authenticated",
-        variant: "destructive",
-      })
-      return
+  useEffect(() => {
+    loadBillingTransactions()
+  }, [user])
+
+  const loadBillingTransactions = async () => {
+    if (!user) return
+    
+    setLoadingTransactions(true)
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/billing/transactions?userId=${user.id}`)
+      if (response.ok) {
+        const data = await response.json()
+        setBillingTransactions(data.transactions || [])
+      }
+    } catch (error) {
+      console.error('Error loading billing transactions:', error)
+      setBillingTransactions([])
+    } finally {
+      setLoadingTransactions(false)
     }
+  }
+
+  const handleProfileUpdate = async () => {
+    if (!user) return
 
     setLoading(true)
     try {
@@ -134,18 +188,22 @@ export default function SettingsPage() {
 
       if (response.ok) {
         toast({
-          title: "Success",
-          description: "Profile updated successfully",
+          title: "Profile Updated",
+          description: "Your profile has been successfully updated.",
         })
       } else {
-        throw new Error('Failed to update profile')
+        toast({
+          title: "Update Failed",
+          description: "Failed to update profile. Please try again.",
+          variant: "destructive"
+        })
       }
     } catch (error) {
-      console.error('Error saving profile:', error)
+      console.error('Error updating profile:', error)
       toast({
-        title: "Error",
-        description: "Failed to update profile",
-        variant: "destructive",
+        title: "Update Failed",
+        description: "An error occurred while updating your profile.",
+        variant: "destructive"
       })
     } finally {
       setLoading(false)
@@ -162,16 +220,89 @@ export default function SettingsPage() {
       return
     }
     
-    // Simulate API call
+    if (passwordData.newPassword.length < 8) {
+      toast({
+        title: "Password Too Short",
+        description: "Password must be at least 8 characters long.",
+        variant: "destructive"
+      })
+      return
+    }
+
     toast({
-      title: "Password Changed",
+      title: "Password Updated",
       description: "Your password has been successfully updated.",
     })
     setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" })
   }
 
+  const handleEmailUpdate = async () => {
+    if (!user?.id) {
+      toast({
+        title: "Error",
+        description: "User not authenticated",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Check if email actually changed
+    if (profileData.email === user.email) {
+      toast({
+        title: "No Changes",
+        description: "Email address is already up to date.",
+      })
+      return
+    }
+
+    setLoading(true)
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/account/update-email`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          newEmail: profileData.email
+        }),
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        
+        // Update auth context with new email
+        updateUser({
+          ...user,
+          email: profileData.email
+        })
+        
+        toast({
+          title: "Success",
+          description: "Email address updated successfully",
+        })
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to update email')
+      }
+    } catch (error) {
+      console.error('Error updating email:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update email",
+        variant: "destructive",
+      })
+      // Reset email field to original value on error
+      setProfileData(prev => ({
+        ...prev,
+        email: user.email || ""
+      }))
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleNotificationUpdate = () => {
-    // Simulate API call
     toast({
       title: "Notifications Updated",
       description: "Your notification preferences have been saved.",
@@ -179,11 +310,10 @@ export default function SettingsPage() {
   }
 
   const handleDeleteAccount = () => {
-    // This would typically show a confirmation dialog
     toast({
       title: "Account Deletion",
-      description: "Please contact support to delete your account.",
-      variant: "destructive",
+      description: "Account deletion is not implemented in this demo.",
+      variant: "destructive"
     })
   }
 
@@ -218,6 +348,21 @@ export default function SettingsPage() {
     "Hip Hop", "R&B", "Pop", "Rock", "Jazz", "Blues", "Country", 
     "Electronic", "Reggae", "Soul", "Funk", "Alternative", "Indie"
   ]
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount)
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  }
 
   if (!user) {
     return (
@@ -315,6 +460,15 @@ export default function SettingsPage() {
                             onChange={(e) => setProfileData({...profileData, email: e.target.value})}
                           />
                         </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone</Label>
+                        <Input
+                          id="phone"
+                          value={profileData.phone}
+                          onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
+                        />
                       </div>
 
                       <div className="space-y-2">
@@ -843,22 +997,32 @@ export default function SettingsPage() {
 
                 <div>
                   <h4 className="font-medium mb-3">Recent Transactions</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center p-3 border rounded-lg">
-                      <div>
-                        <p className="font-medium">Urban Vibes Studio</p>
-                        <p className="text-sm text-muted-foreground">April 10, 2025</p>
-                      </div>
-                      <span className="font-medium">$600.00</span>
+                  {loadingTransactions ? (
+                    <div className="p-4 text-center text-muted-foreground">
+                      Loading transactions...
                     </div>
-                    <div className="flex justify-between items-center p-3 border rounded-lg">
-                      <div>
-                        <p className="font-medium">Soundwave Studios</p>
-                        <p className="text-sm text-muted-foreground">March 28, 2025</p>
-                      </div>
-                      <span className="font-medium">$450.00</span>
+                  ) : billingTransactions.length === 0 ? (
+                    <div className="p-4 text-center text-muted-foreground">
+                      No transactions found. Complete a booking to see your payment history.
                     </div>
-                  </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {billingTransactions.slice(0, 5).map((transaction) => (
+                        <div key={transaction.id} className="flex justify-between items-center p-3 border rounded-lg">
+                          <div>
+                            <p className="font-medium">{transaction.studioName}</p>
+                            <p className="text-sm text-muted-foreground">{formatDate(transaction.createdAt)}</p>
+                          </div>
+                          <span className="font-medium">{formatCurrency(transaction.amount)}</span>
+                        </div>
+                      ))}
+                      {billingTransactions.length > 5 && (
+                        <Button variant="outline" className="w-full mt-2">
+                          View All Transactions
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="pt-4 border-t">

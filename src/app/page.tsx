@@ -1,9 +1,5 @@
-'use client'
-
-import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { useRouter } from "next/navigation"
 import { Search, Star } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -11,21 +7,6 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 
 export default function HomePage() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const router = useRouter()
-
-  const handleSearch = () => {
-    if (searchQuery.trim()) {
-      router.push(`/studios?location=${encodeURIComponent(searchQuery.trim())}`)
-    }
-  }
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSearch()
-    }
-  }
-
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-10 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -84,13 +65,9 @@ export default function HomePage() {
                     type="text"
                     placeholder="Enter your city to find nearby studios"
                     className="pl-8 h-12 rounded-full"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyPress={handleKeyPress}
                   />
                   <Button 
                     className="absolute right-1 top-1 h-10 rounded-full px-4"
-                    onClick={handleSearch}
                   >
                     Search
                   </Button>
@@ -202,13 +179,6 @@ interface StudioCardProps {
 }
 
 function StudioCard({ name, image, city, rating, price }: StudioCardProps) {
-  const router = useRouter()
-
-  const handleViewDetails = () => {
-    // For now, navigate to studios page with the studio name as search
-    router.push(`/studios?search=${encodeURIComponent(name)}`)
-  }
-
   return (
     <Card className="overflow-hidden">
       <div className="aspect-video relative">
@@ -230,7 +200,7 @@ function StudioCard({ name, image, city, rating, price }: StudioCardProps) {
         <p className="text-sm font-medium">
           <span className="font-bold">${price}</span> / hour
         </p>
-        <Button variant="outline" size="sm" onClick={handleViewDetails}>
+        <Button variant="outline" size="sm">
           View Details
         </Button>
       </CardFooter>

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { FollowButton, FollowStats } from "@/components/ui/follow-button"
+import { MessageButton } from "@/components/ui/message-button"
 import { Star, MapPin, Calendar, Music, Globe, Instagram, Twitter, ExternalLink, User, Headphones } from "lucide-react"
 import { API_BASE_URL } from "@/lib/config"
 import Link from "next/link"
@@ -44,15 +45,22 @@ interface ArtistProfile {
   created_at?: string
 }
 
-export default function ArtistProfilePage() {
-  const params = useParams()
+export default async function ArtistProfilePage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
+  const { id: artistId } = await params
+  
+  return <ArtistProfilePageClient artistId={artistId} />
+}
+
+function ArtistProfilePageClient({ artistId }: { artistId: string }) {
   const { user } = useAuth()
   const { toast } = useToast()
   const [artist, setArtist] = useState<ArtistProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
-  const artistId = params.id as string
 
   useEffect(() => {
     const fetchArtistProfile = async () => {
@@ -206,7 +214,10 @@ export default function ArtistProfilePage() {
               <div className="flex items-center gap-3">
                 <FollowStats targetId={artist.id} />
                 {user?.id !== artist.id && (
-                  <FollowButton targetId={artist.id} />
+                  <>
+                    <FollowButton targetId={artist.id} />
+                    <MessageButton targetId={artist.id} />
+                  </>
                 )}
               </div>
             </div>

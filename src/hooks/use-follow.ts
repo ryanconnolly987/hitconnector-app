@@ -2,8 +2,6 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/lib/auth'
 import { useToast } from '@/hooks/use-toast'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'
-
 interface FollowStatus {
   isFollowing: boolean
   followersCount: number
@@ -35,11 +33,15 @@ export function useFollow(targetId: string) {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/users/${user.id}/follow-status/${targetId}`
+        `/api/users/${user.id}/follow-status/${targetId}`
       )
       if (response.ok) {
         const data = await response.json()
-        setFollowStatus(data)
+        setFollowStatus({
+          isFollowing: data.isFollowing,
+          followersCount: data.followersCount,
+          followingCount: data.followingCount
+        })
       }
     } catch (error) {
       console.error('Failed to fetch follow status:', error)
@@ -52,7 +54,7 @@ export function useFollow(targetId: string) {
 
     setLoading(true)
     try {
-      const response = await fetch(`${API_BASE_URL}/api/follow`, {
+      const response = await fetch(`/api/follow`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -121,7 +123,7 @@ export function useFollowing() {
 
     const fetchFollowing = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/follow/following/${user.id}`)
+        const response = await fetch(`/api/follow/following/${user.id}`)
         if (response.ok) {
           const data = await response.json()
           setFollowing(data.following || [])
@@ -151,7 +153,7 @@ export function useFollowers(userId?: string) {
       }
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/users/${userId}/followers`)
+        const response = await fetch(`/api/users/${userId}/followers`)
         if (response.ok) {
           const data = await response.json()
           setFollowers(data.followers || [])
