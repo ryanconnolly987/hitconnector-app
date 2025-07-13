@@ -419,7 +419,20 @@ export default function StudioDashboardPage() {
                                   className="bg-blue-100 text-blue-800 text-xs p-1 rounded mb-1 truncate"
                                   title={`${booking.userName} - ${booking.startTime}-${booking.endTime}`}
                                 >
-                                  {booking.userName}
+                                  <div className="flex items-center justify-between">
+                                    <span>{booking.userName}</span>
+                                    {booking.userId && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-4 w-4 p-0 ml-1"
+                                        onClick={() => window.open(`/artist/${booking.userSlug || booking.userId}`, '_blank')}
+                                        title={`View ${booking.userName}'s profile`}
+                                      >
+                                        <User className="h-3 w-3" />
+                                      </Button>
+                                    )}
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -473,8 +486,21 @@ export default function StudioDashboardPage() {
                               <AvatarImage src="/placeholder.svg" alt={request.userName} />
                               <AvatarFallback>{request.userName?.charAt(0) || 'U'}</AvatarFallback>
                             </Avatar>
-                            <div>
-                              <div className="font-medium">{request.userName}</div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{request.userName}</span>
+                                {request.userId && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
+                                    onClick={() => window.open(`/artist/${request.userSlug || request.userId}`, '_blank')}
+                                    title={`View ${request.userName}'s profile`}
+                                  >
+                                    <User className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
                               <div className="text-sm text-muted-foreground">{request.userEmail}</div>
                             </div>
                           </div>
@@ -564,8 +590,21 @@ export default function StudioDashboardPage() {
                           <AvatarImage src="/placeholder.svg" alt={booking.userName} />
                           <AvatarFallback>{booking.userName?.charAt(0) || 'U'}</AvatarFallback>
                         </Avatar>
-                        <div>
-                          <CardTitle className="text-base">{booking.userName}</CardTitle>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <CardTitle className="text-base">{booking.userName}</CardTitle>
+                            {booking.userId && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={() => window.open(`/artist/${booking.userSlug || booking.userId}`, '_blank')}
+                                title={`View ${booking.userName}'s profile`}
+                              >
+                                <User className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
                           <Badge variant={booking.status === "confirmed" ? "default" : "outline"}>
                             {booking.status === "confirmed" ? "Confirmed" : "Pending"}
                           </Badge>
@@ -648,17 +687,17 @@ function StudioDashboardSidebar({ studio }: { studio: { name: string; avatar: st
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
-              <Link href="/messages">
-                <MessageSquare className="h-4 w-4" />
-                <span>Messages</span>
+              <Link href="/studio-dashboard/bookings">
+                <BookOpen className="h-4 w-4" />
+                <span>Bookings</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
-              <Link href="/studio-dashboard/bookings">
-                <BookOpen className="h-4 w-4" />
-                <span>Bookings</span>
+              <Link href="/messages">
+                <MessageSquare className="h-4 w-4" />
+                <span>Messages</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

@@ -82,18 +82,30 @@ export async function GET() {
         const user = findUserById(call.createdBy || call.postedById);
         if (user) {
           let posterName = user.name;
+          let posterImage = '';
+          let studioInfo = null;
           
-          // If user is a studio user, try to get studio name
+          // If user is a studio user, try to get studio name and image
           if (user.role === 'studio' && user.studioId) {
             const studio = findStudioById(user.studioId);
             if (studio && studio.name) {
               posterName = studio.name;
+              posterImage = studio.profileImage || '';
+              studioInfo = {
+                slug: user.slug || user.id, // Use user slug for studio profile
+                profile: {
+                  name: studio.name,
+                  avatar: studio.profileImage || ''
+                }
+              };
             }
           }
           
           return {
             ...call,
-            posterName
+            posterName,
+            posterImage,
+            studio: studioInfo
           };
         }
       }

@@ -37,6 +37,7 @@ interface Studio {
   followers?: string[]
   rooms?: any[]
   staff?: any[]
+  slug?: string // Added slug to the interface
 }
 
 const amenityIcons: { [key: string]: any } = {
@@ -273,25 +274,29 @@ function StudioCard({ studio }: { studio: Studio }) {
           </div>
         )}
       </div>
+      
       <CardContent className="p-4">
-        <div className="space-y-2">
-          <div className="flex items-start justify-between">
-            <h3 className="font-semibold text-lg leading-none">{studio.name}</h3>
-            <div className="flex items-center gap-1">
-              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-              <span className="text-sm font-medium">{studio.rating}</span>
-              <span className="text-sm text-muted-foreground">({studio.reviewCount})</span>
+        <div className="space-y-3">
+          <div>
+            <h3 className="font-semibold text-lg mb-1">{studio.name}</h3>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <MapPin className="h-4 w-4" />
+              <span>{getLocationDisplay(studio.location || studio.address || "Location not specified")}</span>
             </div>
+            {studio.rating > 0 && (
+              <div className="flex items-center gap-1 mt-1">
+                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                <span className="text-sm">{studio.rating}</span>
+                <span className="text-sm text-muted-foreground">({studio.reviewCount} reviews)</span>
+              </div>
+            )}
           </div>
           
-          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-            <MapPin className="h-4 w-4" />
-            <span>{getLocationDisplay(studio.location)}</span>
-          </div>
-          
-          <p className="text-sm text-muted-foreground line-clamp-2">
-            {studio.description}
-          </p>
+          {studio.description && (
+            <p className="text-sm text-muted-foreground line-clamp-2">
+              {studio.description}
+            </p>
+          )}
           
           {studio.specialties && studio.specialties.length > 0 && (
             <div className="flex flex-wrap gap-1">
@@ -302,7 +307,7 @@ function StudioCard({ studio }: { studio: Studio }) {
               ))}
               {studio.specialties.length > 3 && (
                 <Badge variant="outline" className="text-xs">
-                  +{studio.specialties.length - 3} more
+                  +{studio.specialties.length - 3}
                 </Badge>
               )}
             </div>
@@ -327,7 +332,7 @@ function StudioCard({ studio }: { studio: Studio }) {
               {studio.hourlyRate ? `$${studio.hourlyRate}/hr` : 'Contact for pricing'}
             </div>
             <Button asChild size="sm">
-              <Link href={`/studio-profile?id=${studio.id}`}>
+              <Link href={`/studio/${studio.slug || studio.id}`}>
                 View Studio
               </Link>
             </Button>

@@ -327,7 +327,7 @@ export default function DashboardPage() {
                           </Link>
                         </Button>
                         <Button variant="outline" asChild className="w-full mt-2">
-                          <Link href={`/artist/${user?.id}`}>
+                          <Link href={`/artist/${user?.slug || user?.id}`}>
                             <User className="mr-2 h-4 w-4" />
                             View Public Profile
                           </Link>
@@ -384,27 +384,16 @@ export default function DashboardPage() {
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {following.map((followedUser) => (
                     <Card key={followedUser.id}>
-                      <CardHeader className="flex flex-row items-center gap-4 pb-2">
-                        <Avatar className="h-16 w-16">
-                          <AvatarImage
-                            src={followedUser.profileImage || "/placeholder.svg"}
-                            alt={followedUser.name}
-                          />
-                          <AvatarFallback>
-                            {followedUser.name.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <CardTitle className="text-lg">{followedUser.name}</CardTitle>
-                          <Badge variant="outline" className="text-xs">
-                            {followedUser.type === 'studio' ? 'Studio' : 'Artist'}
-                          </Badge>
-                          {followedUser.location && (
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                              <MapPin className="h-3 w-3" />
-                              <span>{followedUser.location}</span>
-                            </div>
-                          )}
+                      <CardHeader className="pb-2">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-12 w-12">
+                            <AvatarImage src={followedUser.profileImage || "/placeholder.svg"} alt={followedUser.name} />
+                            <AvatarFallback>{followedUser.name?.charAt(0) || 'U'}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <CardTitle className="text-base truncate">{followedUser.name}</CardTitle>
+                            <p className="text-sm text-muted-foreground capitalize">{followedUser.type}</p>
+                          </div>
                         </div>
                       </CardHeader>
                       <CardContent className="pb-2">
@@ -417,7 +406,7 @@ export default function DashboardPage() {
                       </CardContent>
                       <CardFooter>
                         <Button variant="outline" className="w-full" asChild>
-                          <Link href={followedUser.type === 'studio' ? `/studio/${followedUser.id}` : `/artist/${followedUser.id}`}>
+                          <Link href={followedUser.type === 'studio' ? `/studio/${followedUser.slug || followedUser.id}` : `/artist/${followedUser.slug || followedUser.id}`}>
                             View Profile
                           </Link>
                         </Button>

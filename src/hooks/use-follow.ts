@@ -15,6 +15,7 @@ interface FollowData {
   profileImage?: string
   location?: string
   rating?: number
+  slug?: string
 }
 
 export function useFollow(targetId: string) {

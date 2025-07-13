@@ -4,49 +4,52 @@ import path from 'path';
 
 const STUDIOS_FILE = path.join(process.cwd(), 'data', 'studios.json');
 
-// Ensure data directory exists
-function ensureDataDir() {
-  const dataDir = path.dirname(STUDIOS_FILE);
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-  }
-}
-
-// Read studios from file
 function getStudios(): any[] {
-  ensureDataDir();
   try {
-    if (!fs.existsSync(STUDIOS_FILE)) {
-      fs.writeFileSync(STUDIOS_FILE, '[]');
-      return [];
+    if (fs.existsSync(STUDIOS_FILE)) {
+      const data = fs.readFileSync(STUDIOS_FILE, 'utf-8');
+      const parsed = JSON.parse(data);
+      return parsed.studios || [];
     }
-    const data = fs.readFileSync(STUDIOS_FILE, 'utf8');
-    return JSON.parse(data);
+    return [];
   } catch (error) {
     console.error('Error reading studios file:', error);
     return [];
   }
 }
 
-// Write studios to file
+function findStudioById(id: string): any | null {
+  const studios = getStudios();
+  return studios.find(studio => studio.id === id) || null;
+}
+
+function findStudioBySlug(slug: string): any | null {
+  const studios = getStudios();
+  return studios.find(studio => studio.slug === slug) || null;
+}
+
 function saveStudios(studios: any[]): void {
-  ensureDataDir();
   try {
-    fs.writeFileSync(STUDIOS_FILE, JSON.stringify(studios, null, 2));
+    const dataDir = path.dirname(STUDIOS_FILE);
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    const data = { studios };
+    fs.writeFileSync(STUDIOS_FILE, JSON.stringify(data, null, 2));
   } catch (error) {
     console.error('Error saving studios file:', error);
-    throw new Error('Failed to save studio data');
   }
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;
-    const studios = getStudios();
-    const studio = studios.find(s => s.id === id);
+    const { id: identifier } = await params;
+    
+    // Try to find studio by slug first, then by ID
+    let studio = findStudioBySlug(identifier);
+    if (!studio) {
+      studio = findStudioById(identifier);
+    }
     
     if (!studio) {
       return NextResponse.json(
@@ -55,9 +58,9 @@ export async function GET(
       );
     }
     
-    return NextResponse.json(studio, { status: 200 });
+    return NextResponse.json(studio);
   } catch (error) {
-    console.error('GET studio error:', error);
+    console.error('Error fetching studio:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -65,15 +68,17 @@ export async function GET(
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;
+    const { id: identifier } = await params;
     const body = await request.json();
     const studios = getStudios();
-    const studioIndex = studios.findIndex(s => s.id === id);
+    
+    // Find studio by slug first, then by ID
+    let studioIndex = studios.findIndex(s => s.slug === identifier);
+    if (studioIndex === -1) {
+      studioIndex = studios.findIndex(s => s.id === identifier);
+    }
     
     if (studioIndex === -1) {
       return NextResponse.json(
@@ -82,20 +87,20 @@ export async function PUT(
       );
     }
     
-    // Update studio
-    const updatedStudio = {
+    // Update studio data
+    studios[studioIndex] = {
       ...studios[studioIndex],
       ...body,
-      id: id, // Preserve the original ID
+      id: studios[studioIndex].id, // Preserve the original ID
+      slug: studios[studioIndex].slug, // Preserve the original slug
       updatedAt: new Date().toISOString()
     };
     
-    studios[studioIndex] = updatedStudio;
     saveStudios(studios);
     
-    return NextResponse.json(updatedStudio, { status: 200 });
+    return NextResponse.json(studios[studioIndex]);
   } catch (error) {
-    console.error('PUT studio error:', error);
+    console.error('Error updating studio:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

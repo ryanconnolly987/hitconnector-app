@@ -1,20 +1,20 @@
 [
   {
-    "id": "user_1751923639581_nmkeljd3x",
+    "id": "user_1752282588234_3wnbsnjw6",
     "email": "ryanconnolly987@gmail.com",
-    "passwordHash": "$2b$12$MMKNjXfuavu2Iuhx2myQtOAyuZ.5/iALAdpgNnDPzPrZo7RLcAT7W",
+    "passwordHash": "$2b$12$SQBy1fQuqMNpaxPE0Soty.MsbDVxjT7EEutGO3CIznVqja/Agyigy",
     "name": "Lil Ryry",
     "role": "rapper",
-    "createdAt": "2025-07-07T21:27:19.581Z",
-    "stripeCustomerId": "cus_SdfCAqoJCV7U4L"
+    "createdAt": "2025-07-12T01:09:48.234Z",
+    "stripeCustomerId": "cus_SfcsqGdFk6T2hR"
   },
   {
-    "id": "user_1751923766253_jbsdq2dgn",
+    "id": "user_1752282648868_83wk66ylh",
     "email": "ryanconnolly987@g.ucla.edu",
-    "passwordHash": "$2b$12$OkM5lBL0pfE8D6Tp9tMej.e3WXtPNKRkzrkayEzZbb7c9vHL0M.wa",
+    "passwordHash": "$2b$12$xrpwuKd1ZblX1pm6LgKFpe/3kBDUP.lTwbysDQ6PQMP79/f5UCQ3G",
     "name": "Ryan Connolly",
     "role": "studio",
-    "createdAt": "2025-07-07T21:29:26.253Z",
-    "studioId": "studio_1751923766253_c0ifwgy6o"
+    "createdAt": "2025-07-12T01:10:48.868Z",
+    "studioId": "studio_1752282648868_n5f5hertm"
   }
 ]

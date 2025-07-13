@@ -81,7 +81,8 @@ export async function GET(
           name: user.name,
           type: 'user',
           profileImage: user.profileImage,
-          location: user.location
+          location: user.location,
+          slug: user.slug
         };
       }
 
@@ -94,7 +95,8 @@ export async function GET(
           type: 'studio',
           profileImage: studio.profileImage,
           location: studio.location,
-          rating: studio.rating
+          rating: studio.rating,
+          slug: studio.slug
         };
       }
 
@@ -104,7 +106,8 @@ export async function GET(
         name: 'Unknown User',
         type: 'user',
         profileImage: '',
-        location: ''
+        location: '',
+        slug: ''
       };
     });
 

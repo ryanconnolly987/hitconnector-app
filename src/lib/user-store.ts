@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import bcrypt from 'bcrypt';
+import { slugify } from './utils';
 
 export interface User {
   id: string;
@@ -8,6 +9,7 @@ export interface User {
   passwordHash: string;
   name: string;
   role: 'rapper' | 'studio';
+  slug?: string;
   studioId?: string;
   stripeCustomerId?: string;
   createdAt: string;
@@ -78,8 +80,17 @@ export async function createUser(userData: UserCreateData): Promise<User> {
   // Hash password
   const passwordHash = await bcrypt.hash(userData.password, SALT_ROUNDS);
   
-  // Generate user ID
+  // Generate user ID and slug
   const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const baseSlug = slugify(userData.name);
+  
+  // Ensure slug is unique
+  let finalSlug = baseSlug;
+  let counter = 1;
+  while (users.some(user => user.slug === finalSlug)) {
+    finalSlug = `${baseSlug}-${counter}`;
+    counter++;
+  }
   
   // Create user object
   const newUser: User = {
@@ -88,6 +99,7 @@ export async function createUser(userData: UserCreateData): Promise<User> {
     passwordHash,
     name: userData.name,
     role: userData.role,
+    slug: finalSlug,
     createdAt: new Date().toISOString()
   };
 

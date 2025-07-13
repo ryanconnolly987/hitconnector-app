@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { findUserById } from '@/lib/user-store';
 
 const OPEN_CALLS_FILE = path.join(process.cwd(), 'data', 'open-calls.json');
 
@@ -57,6 +58,15 @@ export async function POST(
       );
     }
 
+    // Get user data
+    const user = findUserById(userId);
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
     // Get existing open calls
     const openCalls = getOpenCalls();
     
@@ -81,12 +91,13 @@ export async function POST(
       );
     }
 
-    // Create new application
+    // Create new application with actual user data
     const newApplication = {
       userId,
-      userName: 'Artist User', // This could be enhanced to get actual user name
-      userEmail: '',
-      userImage: '',
+      userName: user.name,
+      userEmail: user.email,
+      userImage: '', // Add profile image when available
+      userRole: user.role,
       message: message || '',
       appliedAt: new Date().toISOString()
     };

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUsers, findUserByEmail, saveUsers } from '@/lib/user-store';
+import { slugify } from '@/lib/utils';
 import fs from 'fs';
 import path from 'path';
 
@@ -8,6 +9,7 @@ interface UserProfile {
   name: string;
   email: string;
   role: string;
+  slug?: string;
   bio?: string;
   location?: string;
   website?: string;
@@ -32,38 +34,43 @@ interface UserProfile {
   createdAt?: string;
 }
 
-const DATA_DIR = path.join(process.cwd(), 'data');
-const PROFILES_FILE = path.join(DATA_DIR, 'user-profiles.json');
-
-// Ensure data directory exists
-function ensureDataDir(): void {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-}
-
-// Read profiles from file
+// Helper function to get user profiles
 function getProfiles(): UserProfile[] {
-  ensureDataDir();
   try {
-    if (fs.existsSync(PROFILES_FILE)) {
-      const data = fs.readFileSync(PROFILES_FILE, 'utf8');
-      return JSON.parse(data);
+    const profilesPath = path.join(process.cwd(), 'data', 'user-profiles.json');
+    
+    if (!fs.existsSync(profilesPath)) {
+      // Create empty profiles file if it doesn't exist
+      const dataDir = path.dirname(profilesPath);
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+      fs.writeFileSync(profilesPath, JSON.stringify([]));
+      return [];
     }
+    
+    const data = fs.readFileSync(profilesPath, 'utf8');
+    return JSON.parse(data);
   } catch (error) {
-    console.error('Error reading profiles file:', error);
+    console.error('Error reading profiles:', error);
+    return [];
   }
-  return [];
 }
 
-// Write profiles to file
+// Helper function to save user profiles
 function saveProfiles(profiles: UserProfile[]): void {
-  ensureDataDir();
   try {
-    fs.writeFileSync(PROFILES_FILE, JSON.stringify(profiles, null, 2));
+    const profilesPath = path.join(process.cwd(), 'data', 'user-profiles.json');
+    const dataDir = path.dirname(profilesPath);
+    
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    
+    fs.writeFileSync(profilesPath, JSON.stringify(profiles, null, 2));
   } catch (error) {
-    console.error('Error saving profiles file:', error);
-    throw new Error('Failed to save profile data');
+    console.error('Error saving profiles:', error);
+    throw error;
   }
 }
 
@@ -84,12 +91,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const profiles = getProfiles();
     const profile = profiles.find(p => p.id === userId);
 
-    // Return combined data
+    // Return combined data with generated slug
     const userData: UserProfile = {
       id: user.id,
       name: user.name,
       email: user.email,
       role: user.role,
+      slug: user.slug || slugify(user.name),
       createdAt: user.createdAt,
       ...profile // Spread profile data if it exists
     };
@@ -122,6 +130,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     let baseUserUpdated = false;
     if (body.name && body.name !== user.name) {
       users[userIndex].name = body.name;
+      // Update slug when name changes
+      users[userIndex].slug = body.slug || slugify(body.name);
       baseUserUpdated = true;
     }
     if (body.email && body.email !== user.email) {
@@ -150,6 +160,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       name: updatedUser.name,
       email: updatedUser.email,
       role: updatedUser.role,
+      slug: updatedUser.slug || slugify(updatedUser.name),
       bio: body.bio,
       location: body.location,
       website: body.website,
@@ -173,17 +184,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     // Save profiles
     saveProfiles(profiles);
 
-    return NextResponse.json({ 
-      success: true, 
-      profile: updatedProfile,
-      user: {
-        id: updatedUser.id,
-        name: updatedUser.name,
-        email: updatedUser.email,
-        role: updatedUser.role
-      },
-      message: 'Profile updated successfully' 
-    });
+    return NextResponse.json(updatedProfile);
 
   } catch (error) {
     console.error('Error updating user profile:', error);

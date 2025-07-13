@@ -10,6 +10,7 @@ interface User {
   email: string
   name: string
   role: 'rapper' | 'studio'
+  slug?: string
   avatar?: string
   studioId?: string
 }

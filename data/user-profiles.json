@@ -1,22 +1,16 @@
 [
   {
-    "id": "user_1751923639581_nmkeljd3x",
+    "id": "user_1752282588234_3wnbsnjw6",
     "name": "Lil Ryry",
     "email": "ryanconnolly987@gmail.com",
     "role": "rapper",
-    "bio": "Upcoming rapper from Atlanta, working on my debut mixtape. Love trap beats and melodic flows.",
-    "location": "Atlanta, GA",
+    "bio": "I dwerk professionally. Don't test me.",
+    "location": "Los Angeles, CA",
     "website": "",
-    "trackUrl": "https://www.youtube.com/watch?v=4qvyhd8MyJE",
-    "profileImage": "/uploads/avatars/avatar_user_1751923639581_nmkeljd3x_1751923664114.PNG",
-    "bannerImage": "/uploads/banners/banner_user_1751923639581_nmkeljd3x_1751923658910.png",
-    "projectHighlights": [
-      {
-        "id": "highlight-1751923679290",
-        "title": "Got hella bitches",
-        "description": "i got hella bitches once"
-      }
-    ],
+    "trackUrl": "https://youtu.be/dQw4w9WgXcQ?feature=shared",
+    "profileImage": "/uploads/avatars/avatar_user_1752282588234_3wnbsnjw6_1752384170362.png",
+    "bannerImage": "/uploads/banners/banner_user_1752282588234_3wnbsnjw6_1752384163107.PNG",
+    "projectHighlights": [],
     "socialMedia": {
       "instagram": "@prod_ryry",
       "twitter": "",
@@ -25,10 +19,11 @@
     },
     "genres": [
       "Hip Hop",
-      "Trap",
-      "R&B"
+      "R&B",
+      "Pop",
+      "Rock"
     ],
-    "experience": "intermediate",
-    "createdAt": "2025-07-07T21:27:19.581Z"
+    "experience": "professional",
+    "createdAt": "2025-07-12T01:09:48.234Z"
   }
 ]

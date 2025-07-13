@@ -4,6 +4,12 @@ import path from 'path';
 
 const FOLLOWS_FILE = path.join(process.cwd(), 'data', 'follows.json');
 
+interface Follow {
+  followerId: string;
+  followingId: string;
+  createdAt: string;
+}
+
 // Ensure data directory exists
 function ensureDataDir() {
   const dataDir = path.dirname(FOLLOWS_FILE);
@@ -13,96 +19,119 @@ function ensureDataDir() {
 }
 
 // Read follows from file
-function getFollows(): any {
+function getFollows(): Follow[] {
   ensureDataDir();
   try {
     if (!fs.existsSync(FOLLOWS_FILE)) {
-      const initialData = { follows: [] };
-      fs.writeFileSync(FOLLOWS_FILE, JSON.stringify(initialData, null, 2));
-      return initialData;
+      fs.writeFileSync(FOLLOWS_FILE, '[]');
+      return [];
     }
     const data = fs.readFileSync(FOLLOWS_FILE, 'utf8');
     return JSON.parse(data);
   } catch (error) {
     console.error('Error reading follows file:', error);
-    return { follows: [] };
+    return [];
   }
 }
 
-// Write follows to file
-function saveFollows(followsData: any): void {
+// Save follows to file
+function saveFollows(follows: Follow[]): void {
   ensureDataDir();
   try {
-    fs.writeFileSync(FOLLOWS_FILE, JSON.stringify(followsData, null, 2));
+    fs.writeFileSync(FOLLOWS_FILE, JSON.stringify(follows, null, 2));
   } catch (error) {
     console.error('Error saving follows file:', error);
-    throw new Error('Failed to save follows data');
+    throw new Error('Failed to save follows');
   }
 }
 
+// POST /api/follow - Follow a user
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { followerId, followedId } = body;
+    const { followerId, followingId } = await request.json();
 
-    if (!followerId || !followedId) {
+    if (!followerId || !followingId) {
       return NextResponse.json(
-        { error: 'followerId and followedId are required' },
+        { error: 'followerId and followingId are required' },
         { status: 400 }
       );
     }
 
-    if (followerId === followedId) {
+    if (followerId === followingId) {
       return NextResponse.json(
         { error: 'Cannot follow yourself' },
         { status: 400 }
       );
     }
 
-    const followsData = getFollows();
-    const follows = followsData.follows || [];
-
+    const follows = getFollows();
+    
     // Check if already following
-    const existingFollowIndex = follows.findIndex(
-      (follow: any) => follow.followerId === followerId && follow.followedId === followedId
+    const existingFollow = follows.find(
+      f => f.followerId === followerId && f.followingId === followingId
     );
 
-    let action: string;
-    let isFollowing: boolean;
-
-    if (existingFollowIndex >= 0) {
-      // Unfollow
-      follows.splice(existingFollowIndex, 1);
-      action = 'unfollowed';
-      isFollowing = false;
-    } else {
-      // Follow
-      follows.push({
-        id: `follow_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        followerId,
-        followedId,
-        createdAt: new Date().toISOString()
-      });
-      action = 'followed';
-      isFollowing = true;
+    if (existingFollow) {
+      return NextResponse.json(
+        { error: 'Already following this user' },
+        { status: 400 }
+      );
     }
 
-    // Save updated follows
-    followsData.follows = follows;
-    saveFollows(followsData);
+    // Add new follow
+    const newFollow: Follow = {
+      followerId,
+      followingId,
+      createdAt: new Date().toISOString()
+    };
 
-    // Calculate counts
-    const followersCount = follows.filter((f: any) => f.followedId === followedId).length;
-    const followingCount = follows.filter((f: any) => f.followerId === followerId).length;
+    follows.push(newFollow);
+    saveFollows(follows);
 
-    return NextResponse.json({
-      action,
-      isFollowing,
-      followersCount,
-      followingCount
-    });
+    return NextResponse.json({ success: true }, { status: 201 });
   } catch (error) {
-    console.error('Error toggling follow status:', error);
+    console.error('POST follow error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE /api/follow - Unfollow a user
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const followerId = searchParams.get('followerId');
+    const followingId = searchParams.get('followingId');
+
+    if (!followerId || !followingId) {
+      return NextResponse.json(
+        { error: 'followerId and followingId are required' },
+        { status: 400 }
+      );
+    }
+
+    const follows = getFollows();
+    
+    // Find and remove the follow
+    const followIndex = follows.findIndex(
+      f => f.followerId === followerId && f.followingId === followingId
+    );
+
+    if (followIndex === -1) {
+      return NextResponse.json(
+        { error: 'Follow relationship not found' },
+        { status: 404 }
+      );
+    }
+
+    follows.splice(followIndex, 1);
+    saveFollows(follows);
+
+    return NextResponse.json({ success: true }, { status: 200 });
+  } catch (error) {
+    console.error('DELETE follow error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

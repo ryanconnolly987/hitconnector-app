@@ -1,92 +1,83 @@
 "use client"
 
-import { Button } from '@/components/ui/button'
-import { MessageSquare } from 'lucide-react'
-import { useAuth } from '@/lib/auth'
-import { useRouter } from 'next/navigation'
-import { useToast } from '@/hooks/use-toast'
-import { API_BASE_URL } from '@/lib/config'
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { MessageSquare } from "lucide-react"
+import { useAuth } from "@/lib/auth"
+import { useToast } from "@/hooks/use-toast"
 
 interface MessageButtonProps {
-  targetId: string
-  variant?: 'default' | 'outline' | 'secondary'
-  size?: 'sm' | 'default' | 'lg'
-  showIcon?: boolean
+  recipientId: string
+  recipientName?: string
+  variant?: "default" | "outline" | "ghost"
+  size?: "sm" | "default" | "lg"
   className?: string
+  children?: React.ReactNode
 }
 
-export function MessageButton({ 
-  targetId, 
-  variant = 'outline',
-  size = 'default',
-  showIcon = true,
-  className = ''
+export function MessageButton({
+  recipientId,
+  recipientName,
+  variant = "default",
+  size = "default",
+  className,
+  children
 }: MessageButtonProps) {
   const { user } = useAuth()
-  const router = useRouter()
   const { toast } = useToast()
+  const router = useRouter()
+  const [loading, setLoading] = useState(false)
 
-  const handleMessage = async () => {
-    if (!user?.id) {
+  const handleClick = async () => {
+    if (!user) {
       toast({
-        title: "Sign in required",
-        description: "Please sign in to send messages",
+        title: "Authentication Required",
+        description: "Please log in to send messages.",
         variant: "destructive"
       })
       return
     }
 
-    if (user.id === targetId) {
+    if (user.id === recipientId) {
       toast({
-        title: "Cannot message yourself",
-        description: "You cannot send messages to yourself",
+        title: "Invalid Action",
+        description: "You cannot send a message to yourself.",
         variant: "destructive"
       })
       return
     }
 
+    setLoading(true)
     try {
-      // Check if conversation already exists
-      const response = await fetch(`${API_BASE_URL}/api/messages?userId=${user.id}`)
-      if (response.ok) {
-        const data = await response.json()
-        const existingConversation = data.conversations.find((conv: any) => 
-          conv.participants.includes(targetId)
-        )
-
-        if (existingConversation) {
-          // Navigate to existing conversation
-          router.push(`/messages?conversation=${existingConversation.id}`)
-        } else {
-          // Navigate to messages page - it will create a new conversation when first message is sent
-          router.push(`/messages?recipient=${targetId}`)
-        }
-      } else {
-        // Navigate to messages page anyway
-        router.push(`/messages?recipient=${targetId}`)
-      }
+      // Navigate to messages page with recipient parameter
+      router.push(`/messages?recipient=${recipientId}`)
     } catch (error) {
-      console.error('Error checking conversations:', error)
-      // Navigate to messages page anyway
-      router.push(`/messages?recipient=${targetId}`)
+      console.error('Error navigating to messages:', error)
+      toast({
+        title: "Error",
+        description: "Failed to open messages. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
     }
-  }
-
-  if (!user || user.id === targetId) {
-    return null
   }
 
   return (
     <Button
+      onClick={handleClick}
+      disabled={loading}
       variant={variant}
       size={size}
-      onClick={handleMessage}
       className={className}
     >
-      {showIcon && (
-        <MessageSquare className="mr-2 h-4 w-4" />
+      {children || (
+        <>
+          <MessageSquare className="h-4 w-4 mr-2" />
+          Message{recipientName ? ` ${recipientName}` : ''}
+        </>
       )}
-      Message
     </Button>
   )
 } 

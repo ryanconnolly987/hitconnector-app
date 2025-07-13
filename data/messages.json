@@ -1,3 +1,144 @@
 {
-  "conversations": []
+  "messages": [
+    {
+      "id": "17522856642676ejhfcwqo",
+      "conversationId": "1752285649825po6dmhk40",
+      "senderId": "user_123",
+      "receiverId": "studio_456",
+      "text": "Hello! This is a test message from the new system.",
+      "timestamp": "2025-07-12T02:01:04.267Z",
+      "read": false
+    },
+    {
+      "id": "1752380805387vwnoi4pmw",
+      "conversationId": "1752374577580yfoycakk6",
+      "senderId": "user_1752282588234_3wnbsnjw6",
+      "receiverId": "studio_1752282693052_clheml04p",
+      "text": "hey",
+      "timestamp": "2025-07-13T04:26:45.387Z",
+      "read": false
+    },
+    {
+      "id": "175238137608367r9w173i",
+      "conversationId": "17523813723507uipl787o",
+      "senderId": "user_1752282648868_83wk66ylh",
+      "receiverId": "user_1752282588234_3wnbsnjw6",
+      "text": "hey",
+      "timestamp": "2025-07-13T04:36:16.083Z",
+      "read": false
+    },
+    {
+      "id": "1752382437492in7tz1y47",
+      "conversationId": "17523813723507uipl787o",
+      "senderId": "user_1752282588234_3wnbsnjw6",
+      "receiverId": "user_1752282648868_83wk66ylh",
+      "text": "Hello! This is a test message from the updated messaging system with proper user info and avatars! 🎵",
+      "timestamp": "2025-07-13T04:53:57.492Z",
+      "read": false
+    },
+    {
+      "id": "1752382845091jduywqtrt",
+      "conversationId": "17523813723507uipl787o",
+      "senderId": "user_1752282648868_83wk66ylh",
+      "receiverId": "user_1752282588234_3wnbsnjw6",
+      "text": "Hey",
+      "timestamp": "2025-07-13T05:00:45.091Z",
+      "read": false
+    },
+    {
+      "id": "1752385151963s1hy218o0",
+      "conversationId": "17523813723507uipl787o",
+      "senderId": "user_1752282648868_83wk66ylh",
+      "receiverId": "user_1752282588234_3wnbsnjw6",
+      "text": "test again",
+      "timestamp": "2025-07-13T05:39:11.963Z",
+      "read": false
+    },
+    {
+      "id": "1752389048719lcqp9jmog",
+      "conversationId": "17523813723507uipl787o",
+      "senderId": "user_1752282648868_83wk66ylh",
+      "receiverId": "user_1752282588234_3wnbsnjw6",
+      "text": "is my pfp normal now",
+      "timestamp": "2025-07-13T06:44:08.719Z",
+      "read": false
+    }
+  ],
+  "conversations": [
+    {
+      "id": "1752285649825po6dmhk40",
+      "participants": [
+        "user_123",
+        "studio_456"
+      ],
+      "updatedAt": "2025-07-12T02:01:04.267Z",
+      "unreadCount": {
+        "user_123": 0,
+        "studio_456": 1
+      },
+      "lastMessage": {
+        "id": "17522856642676ejhfcwqo",
+        "conversationId": "1752285649825po6dmhk40",
+        "senderId": "user_123",
+        "receiverId": "studio_456",
+        "text": "Hello! This is a test message from the new system.",
+        "timestamp": "2025-07-12T02:01:04.267Z",
+        "read": false
+      }
+    },
+    {
+      "id": "1752374577580yfoycakk6",
+      "participants": [
+        "user_1752282588234_3wnbsnjw6",
+        "studio_1752282693052_clheml04p"
+      ],
+      "updatedAt": "2025-07-13T04:26:45.387Z",
+      "unreadCount": {
+        "user_1752282588234_3wnbsnjw6": 0,
+        "studio_1752282693052_clheml04p": 1
+      },
+      "lastMessage": {
+        "id": "1752380805387vwnoi4pmw",
+        "conversationId": "1752374577580yfoycakk6",
+        "senderId": "user_1752282588234_3wnbsnjw6",
+        "receiverId": "studio_1752282693052_clheml04p",
+        "text": "hey",
+        "timestamp": "2025-07-13T04:26:45.387Z",
+        "read": false
+      }
+    },
+    {
+      "id": "17523749640946rf0ern9e",
+      "participants": [
+        "user_1752282588234_3wnbsnjw6",
+        "undefined"
+      ],
+      "updatedAt": "2025-07-13T02:49:24.094Z",
+      "unreadCount": {
+        "user_1752282588234_3wnbsnjw6": 0,
+        "undefined": 0
+      }
+    },
+    {
+      "id": "17523813723507uipl787o",
+      "participants": [
+        "user_1752282648868_83wk66ylh",
+        "user_1752282588234_3wnbsnjw6"
+      ],
+      "updatedAt": "2025-07-13T06:44:08.719Z",
+      "unreadCount": {
+        "user_1752282648868_83wk66ylh": 1,
+        "user_1752282588234_3wnbsnjw6": 4
+      },
+      "lastMessage": {
+        "id": "1752389048719lcqp9jmog",
+        "conversationId": "17523813723507uipl787o",
+        "senderId": "user_1752282648868_83wk66ylh",
+        "receiverId": "user_1752282588234_3wnbsnjw6",
+        "text": "is my pfp normal now",
+        "timestamp": "2025-07-13T06:44:08.719Z",
+        "read": false
+      }
+    }
+  ]
 }

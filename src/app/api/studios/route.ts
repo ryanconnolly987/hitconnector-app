@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { slugify } from '@/lib/utils';
 
 const STUDIOS_FILE = path.join(process.cwd(), 'data', 'studios.json');
 
@@ -12,30 +13,55 @@ function ensureDataDir() {
   }
 }
 
-// Read studios from file
 function getStudios(): any[] {
-  ensureDataDir();
   try {
-    if (!fs.existsSync(STUDIOS_FILE)) {
-      fs.writeFileSync(STUDIOS_FILE, '[]');
-      return [];
+    ensureDataDir();
+    if (fs.existsSync(STUDIOS_FILE)) {
+      const data = fs.readFileSync(STUDIOS_FILE, 'utf-8');
+      const parsed = JSON.parse(data);
+      let studios = parsed.studios || [];
+      
+      // Add slugs to studios that don't have them
+      let needsSave = false;
+      studios = studios.map((studio: any) => {
+        if (!studio.slug && studio.name) {
+          const baseSlug = slugify(studio.name);
+          let finalSlug = baseSlug;
+          let counter = 1;
+          
+          // Ensure slug is unique
+          while (studios.some((s: any) => s.slug === finalSlug && s.id !== studio.id)) {
+            finalSlug = `${baseSlug}-${counter}`;
+            counter++;
+          }
+          
+          studio.slug = finalSlug;
+          needsSave = true;
+        }
+        return studio;
+      });
+      
+      // Save back if we added slugs
+      if (needsSave) {
+        saveStudios(studios);
+      }
+      
+      return studios;
     }
-    const data = fs.readFileSync(STUDIOS_FILE, 'utf8');
-    return JSON.parse(data);
+    return [];
   } catch (error) {
     console.error('Error reading studios file:', error);
     return [];
   }
 }
 
-// Write studios to file
 function saveStudios(studios: any[]): void {
-  ensureDataDir();
   try {
-    fs.writeFileSync(STUDIOS_FILE, JSON.stringify(studios, null, 2));
+    ensureDataDir();
+    const data = { studios };
+    fs.writeFileSync(STUDIOS_FILE, JSON.stringify(data, null, 2));
   } catch (error) {
     console.error('Error saving studios file:', error);
-    throw new Error('Failed to save studio data');
   }
 }
 
@@ -57,12 +83,22 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const studios = getStudios();
     
-    // Generate studio ID
+    // Generate studio ID and slug
     const studioId = `studio_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const slug = body.name ? slugify(body.name) : slugify(`Studio ${Date.now()}`);
+    
+    // Ensure slug is unique
+    let finalSlug = slug;
+    let counter = 1;
+    while (studios.some(studio => studio.slug === finalSlug)) {
+      finalSlug = `${slug}-${counter}`;
+      counter++;
+    }
     
     // Create studio data
     const newStudio = {
       id: studioId,
+      slug: finalSlug,
       ...body,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()

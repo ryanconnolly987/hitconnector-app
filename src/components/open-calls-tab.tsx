@@ -1,68 +1,68 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { CalendarDays, Clock, DollarSign, MapPin, Plus, Search, Filter, User, Send, Eye } from 'lucide-react'
+import { useAuth } from '@/lib/auth'
+import { useToast } from '@/hooks/use-toast'
+import { API_BASE_URL } from '@/lib/config'
+
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Input } from '@/components/ui/input'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog'
-import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { useAuth } from '@/lib/auth'
-import { API_BASE_URL } from '@/lib/config'
-import { 
-  Search, 
-  Filter, 
-  MapPin, 
-  DollarSign, 
-  Calendar, 
-  Users, 
-  Mail,
-  User,
-  Building2,
-  Clock,
-  Send,
-  Plus,
-  Megaphone,
-  ExternalLink
-} from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { Separator } from '@/components/ui/separator'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 interface OpenCall {
   id: string
-  createdBy: string
-  userType: 'artist' | 'studio'
-  posterName: string
   role: string
   description: string
-  genre?: string
+  genre: string
+  createdBy: string
+  userType: string
+  posterName: string
+  posterImage?: string
   timestamp: string
-  // Legacy fields for backward compatibility
-  postedById?: string
-  postedByType?: 'user' | 'studio'
-  postedByName?: string
-  postedByImage?: string
-  location?: string
-  budget?: string
-  deadline?: string
-  contactEmail?: string
-  status?: string
-  createdAt?: string
-  applicants?: Array<{
-    userId: string
-    userName: string
-    userEmail: string
-    userImage: string
-    message: string
-    appliedAt: string
-  }>
+  applicants?: Applicant[]
+  studio?: {
+    slug: string
+    profile: {
+      name: string
+      avatar: string
+    }
+  }
+}
+
+interface Applicant {
+  userId: string
+  userName: string
+  userEmail: string
+  userImage: string
+  userRole: string
+  message: string
+  appliedAt: string
+}
+
+interface OpenCallWithApplications {
+  id: string
+  role: string
+  genre: string
+  description: string
+  userType: string
+  posterName: string
+  timestamp: string
+  applicants: Applicant[]
+  applicantCount: number
 }
 
 interface OpenCallsTabProps {
-  userType: 'artist' | 'studio'
+  userType: string
   userId: string
   studioId?: string
 }
@@ -72,13 +72,16 @@ export default function OpenCallsTab({ userType, userId, studioId }: OpenCallsTa
   const { toast } = useToast()
   const [openCalls, setOpenCalls] = useState<OpenCall[]>([])
   const [filteredCalls, setFilteredCalls] = useState<OpenCall[]>([])
+  const [openCallsWithApplications, setOpenCallsWithApplications] = useState<OpenCallWithApplications[]>([])
   const [loading, setLoading] = useState(true)
+  const [applicationsLoading, setApplicationsLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
   const [genreFilter, setGenreFilter] = useState('all')
   const [selectedCall, setSelectedCall] = useState<OpenCall | null>(null)
   const [applicationMessage, setApplicationMessage] = useState('')
   const [isApplying, setIsApplying] = useState(false)
+  const [activeTab, setActiveTab] = useState('browse')
   
   // Create Open Call form state
   const [showCreateDialog, setShowCreateDialog] = useState(false)
@@ -99,6 +102,12 @@ export default function OpenCallsTab({ userType, userId, studioId }: OpenCallsTa
   useEffect(() => {
     filterCalls()
   }, [openCalls, searchTerm, roleFilter, genreFilter])
+
+  useEffect(() => {
+    if (activeTab === 'applications') {
+      fetchApplications()
+    }
+  }, [activeTab, userId])
 
   const fetchOpenCalls = async () => {
     try {
@@ -123,40 +132,47 @@ export default function OpenCallsTab({ userType, userId, studioId }: OpenCallsTa
     }
   }
 
+  const fetchApplications = async () => {
+    setApplicationsLoading(true)
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/open-calls/applications?userId=${userId}`)
+      
+      if (response.ok) {
+        const data = await response.json()
+        setOpenCallsWithApplications(data.openCallsWithApplications || [])
+      } else {
+        console.log('Applications endpoint not available')
+        setOpenCallsWithApplications([])
+      }
+    } catch (error) {
+      console.log('Applications feature not available yet')
+      setOpenCallsWithApplications([])
+    } finally {
+      setApplicationsLoading(false)
+    }
+  }
+
   const filterCalls = () => {
-    let filtered = [...openCalls]
-
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter(call =>
-        call.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        call.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (call.posterName || call.postedByName || '').toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    }
-
-    // Role filter
-    if (roleFilter !== 'all') {
-      filtered = filtered.filter(call =>
-        call.role.toLowerCase().includes(roleFilter.toLowerCase())
-      )
-    }
-
-    // Genre filter
-    if (genreFilter !== 'all') {
-      filtered = filtered.filter(call =>
-        call.genre?.toLowerCase() === genreFilter.toLowerCase()
-      )
-    }
-
+    const filtered = openCalls.filter(call => {
+      const matchesSearch = call.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           call.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           call.genre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           call.posterName.toLowerCase().includes(searchTerm.toLowerCase())
+      
+      const matchesRole = roleFilter === 'all' || call.role.toLowerCase() === roleFilter.toLowerCase()
+      const matchesGenre = genreFilter === 'all' || call.genre.toLowerCase() === genreFilter.toLowerCase()
+      
+      return matchesSearch && matchesRole && matchesGenre
+    })
+    
     setFilteredCalls(filtered)
   }
 
   const handleCreateOpenCall = async () => {
-    if (!createForm.role || !createForm.description) {
+    if (!createForm.role || !createForm.description || !createForm.genre) {
       toast({
         title: "Missing Information",
-        description: "Please fill in the role and description fields.",
+        description: "Please fill in role, description, and genre fields.",
         variant: "destructive"
       })
       return
@@ -164,76 +180,37 @@ export default function OpenCallsTab({ userType, userId, studioId }: OpenCallsTa
 
     setIsCreating(true)
     try {
-      // For studios, use the actual user ID, not studio ID
-      let actualCreatedBy = userId;
-      
-      if (userType === 'studio') {
-        // Use the authenticated user's ID (not studioId)
-        actualCreatedBy = userId;
-      }
-
-      if (!actualCreatedBy) {
-        toast({
-          title: "Authentication Error",
-          description: "Unable to identify user. Please try logging in again.",
-          variant: "destructive"
-        })
-        setIsCreating(false)
-        return
-      }
-
       const response = await fetch(`${API_BASE_URL}/api/open-calls`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          createdBy: actualCreatedBy,
-          userType: userType,
+          createdBy: userType === 'studio' ? (studioId || userId) : userId,
           role: createForm.role,
+          genre: createForm.genre,
           description: createForm.description,
-          genre: createForm.genre || undefined,
-          location: createForm.location || undefined,
-          budget: createForm.budget || undefined,
-          deadline: createForm.deadline || undefined,
+          userType
         })
       })
 
       if (response.ok) {
-        const newOpenCall = await response.json()
-        toast({
-          title: "Open Call Posted!",
-          description: "Your open call has been published successfully.",
-        })
+        const newCall = await response.json()
+        setOpenCalls([newCall, ...openCalls])
         setShowCreateDialog(false)
-        setCreateForm({
-          role: '',
-          description: '',
-          genre: '',
-          location: '',
-          budget: '',
-          deadline: ''
-        })
-        
-        // Add the new open call to the existing list immediately
-        setOpenCalls(prevCalls => [newOpenCall, ...prevCalls])
-        
-        // Also refresh from server to ensure consistency
-        await fetchOpenCalls()
-      } else {
-        // Handle API errors
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        setCreateForm({ role: '', description: '', genre: '', location: '', budget: '', deadline: '' })
         toast({
-          title: "Error Creating Open Call",
-          description: errorData.error || "Failed to create open call. Please try again.",
-          variant: "destructive"
+          title: "Open Call Posted",
+          description: "Your open call has been posted successfully."
         })
+      } else {
+        throw new Error('Failed to create open call')
       }
     } catch (error) {
       console.error('Error creating open call:', error)
       toast({
-        title: "Network Error",
-        description: "Failed to connect to the server. Please check your connection and try again.",
+        title: "Error",
+        description: "Failed to post open call. Please try again.",
         variant: "destructive"
       })
     } finally {
@@ -241,52 +218,42 @@ export default function OpenCallsTab({ userType, userId, studioId }: OpenCallsTa
     }
   }
 
-  const handleApply = async (callId: string) => {
-    if (!userId) {
-      toast({
-        title: "Authentication Required",
-        description: "Please log in to apply to open calls.",
-        variant: "destructive"
-      })
-      return
-    }
+  const handleApplyToCall = async () => {
+    if (!selectedCall || !user?.id) return
 
     setIsApplying(true)
     try {
-      const response = await fetch(`${API_BASE_URL}/api/open-calls/${callId}/apply`, {
+      const response = await fetch(`${API_BASE_URL}/api/open-calls/${selectedCall.id}/apply`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userId: userId,
+          userId: user.id,
           message: applicationMessage
         })
       })
 
       if (response.ok) {
-        const data = await response.json()
         toast({
-          title: "Application Submitted!",
-          description: "Your application has been sent successfully.",
+          title: "Application Sent",
+          description: "Your application has been submitted successfully."
         })
         setSelectedCall(null)
         setApplicationMessage('')
-        fetchOpenCalls() // Refresh to show updated applicant count
       } else {
-        // Handle API errors
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        const error = await response.json()
         toast({
-          title: "Error Submitting Application",
-          description: errorData.error || "Failed to submit application. Please try again.",
+          title: "Application Failed",
+          description: error.error || "Failed to submit application.",
           variant: "destructive"
         })
       }
     } catch (error) {
-      console.error('Error submitting application:', error)
+      console.error('Error applying to call:', error)
       toast({
-        title: "Network Error",
-        description: "Failed to connect to the server. Please check your connection and try again.",
+        title: "Error",
+        description: "Failed to submit application. Please try again.",
         variant: "destructive"
       })
     } finally {
@@ -294,391 +261,310 @@ export default function OpenCallsTab({ userType, userId, studioId }: OpenCallsTa
     }
   }
 
-  const formatDate = (dateString: string) => {
-    try {
-      return new Date(dateString).toLocaleDateString()
-    } catch {
-      return dateString
-    }
-  }
-
-  const getTimeAgo = (dateString: string) => {
-    try {
-      const now = new Date()
-      const posted = new Date(dateString)
-      const diffMs = now.getTime() - posted.getTime()
-      const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-      const diffDays = Math.floor(diffHours / 24)
-      
-      if (diffDays > 0) return `${diffDays}d ago`
-      if (diffHours > 0) return `${diffHours}h ago`
-      return 'Just now'
-    } catch {
-      return 'Recently'
-    }
-  }
-
-  const getUniqueGenres = () => {
-    const genres = openCalls.map(call => call.genre).filter(Boolean)
-    return [...new Set(genres)] as string[]
-  }
-
-  const getUniqueRoles = () => {
-    const roles = openCalls.map(call => call.role.toLowerCase()).filter(Boolean)
-    return [...new Set(roles)]
-  }
-
-  // Generate profile link based on poster type
-  const getProfileLink = (call: OpenCall) => {
-    const posterType = call.userType || call.postedByType
-    const posterId = call.createdBy || call.postedById
-    
-    if (posterType === 'studio') {
-      return `/studio/${posterId}`
-    } else {
-      return `/artist/${posterId}`
-    }
-  }
-
   return (
     <div className="space-y-6">
-      {/* Header with Create Button (for both studios and artists) */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Open Calls</h2>
-          <p className="text-muted-foreground">
-            {userType === 'studio' 
-              ? 'Post and manage your open calls for collaborations'
-              : 'Discover collaboration opportunities and post your own open calls'
-            }
-          </p>
-        </div>
-        
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Post Open Call
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Create Open Call</DialogTitle>
-              <DialogDescription>
-                {userType === 'studio' 
-                  ? 'Post a new collaboration opportunity for artists'
-                  : 'Post a collaboration opportunity or find partners'
-                }
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="role">Role/Position *</Label>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="browse">Browse Open Calls</TabsTrigger>
+          <TabsTrigger value="applications">Applications ({openCallsWithApplications.reduce((sum, call) => sum + call.applicantCount, 0)})</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="browse" className="space-y-4">
+          {/* Header with Search, Filters, and Post Open Call CTA */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1 flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
                 <Input
-                  id="role"
-                  placeholder="e.g., Vocalist, Guitarist, Producer"
-                  value={createForm.role}
-                  onChange={(e) => setCreateForm(prev => ({ ...prev, role: e.target.value }))}
+                  placeholder="Search open calls..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full"
                 />
               </div>
-              <div>
-                <Label htmlFor="description">Description *</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Describe what you're looking for..."
-                  value={createForm.description}
-                  onChange={(e) => setCreateForm(prev => ({ ...prev, description: e.target.value }))}
-                  rows={3}
-                />
-              </div>
-              <div>
-                <Label htmlFor="genre">Genre</Label>
-                <Input
-                  id="genre"
-                  placeholder="e.g., Hip-Hop, Rock, Pop"
-                  value={createForm.genre}
-                  onChange={(e) => setCreateForm(prev => ({ ...prev, genre: e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  placeholder="e.g., Los Angeles, CA"
-                  value={createForm.location}
-                  onChange={(e) => setCreateForm(prev => ({ ...prev, location: e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="budget">Budget</Label>
-                <Input
-                  id="budget"
-                  placeholder="e.g., $500-1000, Negotiable"
-                  value={createForm.budget}
-                  onChange={(e) => setCreateForm(prev => ({ ...prev, budget: e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="deadline">Deadline</Label>
-                <Input
-                  id="deadline"
-                  type="date"
-                  value={createForm.deadline}
-                  onChange={(e) => setCreateForm(prev => ({ ...prev, deadline: e.target.value }))}
-                />
-              </div>
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="Filter by role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Roles</SelectItem>
+                  <SelectItem value="rapper">Rapper</SelectItem>
+                  <SelectItem value="producer">Producer</SelectItem>
+                  <SelectItem value="engineer">Engineer</SelectItem>
+                  <SelectItem value="vocalist">Vocalist</SelectItem>
+                  <SelectItem value="songwriter">Songwriter</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={genreFilter} onValueChange={setGenreFilter}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="Filter by genre" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Genres</SelectItem>
+                  <SelectItem value="hip-hop">Hip-Hop</SelectItem>
+                  <SelectItem value="r&b">R&B</SelectItem>
+                  <SelectItem value="pop">Pop</SelectItem>
+                  <SelectItem value="rock">Rock</SelectItem>
+                  <SelectItem value="jazz">Jazz</SelectItem>
+                  <SelectItem value="electronic">Electronic</SelectItem>
+                  <SelectItem value="country">Country</SelectItem>
+                  <SelectItem value="reggae">Reggae</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCreateOpenCall} disabled={isCreating}>
-                {isCreating ? (
-                  <>Creating...</>
-                ) : (
-                  <>
-                    <Send className="mr-2 h-4 w-4" />
-                    Post Open Call
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {/* Filters */}
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search open calls..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          
-          <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger className="w-full sm:w-48">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Filter by role" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Roles</SelectItem>
-              {getUniqueRoles().map(role => (
-                <SelectItem key={role} value={role}>
-                  {role.charAt(0).toUpperCase() + role.slice(1)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={genreFilter} onValueChange={setGenreFilter}>
-            <SelectTrigger className="w-full sm:w-48">
-              <SelectValue placeholder="Filter by genre" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Genres</SelectItem>
-              {getUniqueGenres().map(genre => (
-                <SelectItem key={genre} value={genre}>
-                  {genre}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Results count */}
-      <div>
-        <p className="text-sm text-muted-foreground">
-          Showing {filteredCalls.length} of {openCalls.length} open calls
-        </p>
-      </div>
-
-      {/* Open Calls List */}
-      <div className="space-y-4">
-        {loading ? (
-          <Card className="text-center py-8">
-            <CardContent>
-              <div className="space-y-4">
-                <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center">
-                  <Megaphone className="h-8 w-8 text-muted-foreground animate-pulse" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-medium">Loading open calls...</h3>
-                  <p className="text-muted-foreground">Please wait while we fetch the latest opportunities.</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ) : filteredCalls.length === 0 ? (
-          <Card className="text-center py-8">
-            <CardContent>
-              <div className="space-y-4">
-                <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center">
-                  <Megaphone className="h-8 w-8 text-muted-foreground" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-medium">No open calls found</h3>
-                  <p className="text-muted-foreground">
-                    {searchTerm || roleFilter !== 'all' || genreFilter !== 'all'
-                      ? 'Try adjusting your filters to see more results.'
-                      : 'Be the first to post an open call!'}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ) :
-          filteredCalls.map((call) => (
-            <Card key={call.id} className="overflow-hidden">
-              <CardHeader className="pb-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={call.postedByImage} alt={call.posterName || call.postedByName} />
-                      <AvatarFallback>
-                        {(call.userType || call.postedByType) === 'studio' ? <Building2 className="h-4 w-4" /> : <User className="h-4 w-4" />}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="font-medium">{call.posterName || call.postedByName}</div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        {(call.userType || call.postedByType) === 'studio' ? <Building2 className="h-3 w-3" /> : <User className="h-3 w-3" />}
-                        <span className="capitalize">{call.userType || call.postedByType}</span>
-                        <span>•</span>
-                        <Clock className="h-3 w-3" />
-                        <span>{getTimeAgo(call.timestamp || call.createdAt || '')}</span>
+            
+            {/* Post Open Call CTA - only show for studio users */}
+            {user?.role === 'studio' && (
+              <div className="flex justify-end items-center gap-2">
+                <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+                  <DialogTrigger asChild>
+                    <Button variant="secondary">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Post Open Call
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Post Open Call</DialogTitle>
+                      <DialogDescription>
+                        Create a new open call to find talented artists for your projects.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="role">Role/Position</Label>
+                        <Input
+                          id="role"
+                          placeholder="e.g., Rapper, Vocalist, Producer"
+                          value={createForm.role}
+                          onChange={(e) => setCreateForm({...createForm, role: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="genre">Genre</Label>
+                        <Select value={createForm.genre} onValueChange={(value) => setCreateForm({...createForm, genre: value})}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select genre" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="hip-hop">Hip-Hop</SelectItem>
+                            <SelectItem value="r&b">R&B</SelectItem>
+                            <SelectItem value="pop">Pop</SelectItem>
+                            <SelectItem value="rock">Rock</SelectItem>
+                            <SelectItem value="jazz">Jazz</SelectItem>
+                            <SelectItem value="electronic">Electronic</SelectItem>
+                            <SelectItem value="country">Country</SelectItem>
+                            <SelectItem value="reggae">Reggae</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="description">Description</Label>
+                        <Textarea
+                          id="description"
+                          placeholder="Describe what you're looking for..."
+                          value={createForm.description}
+                          onChange={(e) => setCreateForm({...createForm, description: e.target.value})}
+                          rows={4}
+                        />
                       </div>
                     </div>
-                  </div>
-                  <Badge variant="outline" className="text-xs">
-                    {call.status}
-                  </Badge>
-                </div>
-              </CardHeader>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+                        Cancel
+                      </Button>
+                      <Button onClick={handleCreateOpenCall} disabled={isCreating}>
+                        {isCreating ? 'Posting...' : 'Post Open Call'}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            )}
+          </div>
 
-              <CardContent className="space-y-4">
-                <div>
-                  <h3 className="font-semibold text-lg mb-2">{call.role}</h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed">
-                    {call.description}
-                  </p>
-                </div>
+          {/* Open Calls Grid */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {loading ? (
+              <div className="col-span-full flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : filteredCalls.length > 0 ? (
+              filteredCalls.map((call) => (
+                <Card key={call.id} className="hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        {call.studio ? (
+                          <Link href={`/studio/${call.studio.slug}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={call.studio.profile.avatar || ""} alt={call.studio.profile.name || "Studio"} />
+                              <AvatarFallback>
+                                {call.studio.profile.name?.charAt(0) || "S"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <CardTitle className="text-lg">{call.role}</CardTitle>
+                              <p className="text-sm text-muted-foreground">by {call.studio.profile.name}</p>
+                            </div>
+                          </Link>
+                        ) : (
+                          <>
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={call.posterImage || ""} alt={call.posterName || "User"} />
+                              <AvatarFallback>
+                                {call.posterName?.charAt(0) || "?"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <CardTitle className="text-lg">{call.role}</CardTitle>
+                              <p className="text-sm text-muted-foreground">by {call.posterName || "Unknown User"}</p>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      <Badge variant="secondary">{call.genre}</Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <p className="text-sm line-clamp-3">{call.description}</p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      <span>{new Date(call.timestamp).toLocaleDateString()}</span>
+                    </div>
+                    {call.createdBy !== user?.id && (
+                      <Button 
+                        size="sm" 
+                        className="w-full"
+                        onClick={() => setSelectedCall(call)}
+                      >
+                        Apply Now
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <div className="col-span-full text-center py-8">
+                <h3 className="text-lg font-medium">No open calls found</h3>
+                <p className="text-muted-foreground">Try adjusting your filters or check back later</p>
+              </div>
+            )}
+          </div>
+        </TabsContent>
 
-                <div className="flex flex-wrap gap-2">
-                  {call.genre && (
-                    <Badge variant="secondary" className="text-xs">
-                      {call.genre}
-                    </Badge>
-                  )}
-                  {call.location && (
-                    <Badge variant="outline" className="text-xs">
-                      <MapPin className="h-3 w-3 mr-1" />
-                      {call.location}
-                    </Badge>
-                  )}
-                  {call.budget && (
-                    <Badge variant="outline" className="text-xs">
-                      <DollarSign className="h-3 w-3 mr-1" />
-                      {call.budget}
-                    </Badge>
-                  )}
-                  {call.deadline && (
-                    <Badge variant="outline" className="text-xs">
-                      <Calendar className="h-3 w-3 mr-1" />
-                      Due: {formatDate(call.deadline)}
-                    </Badge>
-                  )}
-                </div>
+        <TabsContent value="applications" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-medium">Applications to My Open Calls</h3>
+            <Badge variant="outline">
+              {openCallsWithApplications.reduce((sum, call) => sum + call.applicantCount, 0)} total applications
+            </Badge>
+          </div>
 
-                {call.applicants && call.applicants.length > 0 && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Users className="h-4 w-4" />
-                    <span>{call.applicants.length} applicant{call.applicants.length !== 1 ? 's' : ''}</span>
-                  </div>
-                )}
-
-                <div className="flex gap-2 pt-2">
-                  {/* Show apply button to all users except the poster */}
-                  {(call.createdBy || call.postedById) !== (userType === 'studio' ? studioId : userId) && (
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button 
-                          variant="default" 
-                          size="sm" 
-                          className="flex-1"
-                          onClick={() => setSelectedCall(call)}
-                        >
-                          <Send className="h-4 w-4 mr-2" />
-                          Apply
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-md">
-                        <DialogHeader>
-                          <DialogTitle>Apply to Open Call</DialogTitle>
-                        </DialogHeader>
-                        {selectedCall && (
-                          <div className="space-y-4">
-                            <div className="space-y-2">
-                              <h4 className="font-medium">{selectedCall.role}</h4>
-                              <p className="text-sm text-muted-foreground">
-                                Posted by {selectedCall.posterName || selectedCall.postedByName}
+          {applicationsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : openCallsWithApplications.length > 0 ? (
+            <div className="space-y-6">
+              {openCallsWithApplications.map((call) => (
+                <Card key={call.id}>
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="text-lg">{call.role}</CardTitle>
+                        <CardDescription>{call.genre} • {call.description}</CardDescription>
+                      </div>
+                      <Badge variant="secondary">
+                        {call.applicantCount} {call.applicantCount === 1 ? 'applicant' : 'applicants'}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="text-sm font-medium">Applications:</div>
+                      <div className="space-y-3">
+                        {call.applicants.map((applicant, index) => (
+                          <div key={`${applicant.userId}-${index}`} className="flex items-start gap-3 p-3 border rounded-lg">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={applicant.userImage || ""} alt={applicant.userName || "User"} />
+                              <AvatarFallback>
+                                {applicant.userName?.charAt(0) || "?"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium">{applicant.userName || "Unknown User"}</p>
+                                <Badge variant="outline" className="text-xs">
+                                  {applicant.userRole || "artist"}
+                                </Badge>
+                              </div>
+                              {applicant.message && (
+                                <p className="text-sm text-muted-foreground mt-1">{applicant.message}</p>
+                              )}
+                              <p className="text-xs text-muted-foreground">
+                                Applied on {new Date(applicant.appliedAt).toLocaleDateString()}
                               </p>
                             </div>
-                            <div>
-                              <label htmlFor="application-message" className="text-sm font-medium">
-                                Application Message (Optional)
-                              </label>
-                              <Textarea
-                                id="application-message"
-                                placeholder="Tell them why you're perfect for this opportunity..."
-                                value={applicationMessage}
-                                onChange={(e) => setApplicationMessage(e.target.value)}
-                                rows={4}
-                                className="mt-1"
-                              />
-                            </div>
-                            <div className="flex gap-2">
-                              <Button 
-                                variant="outline" 
-                                onClick={() => {
-                                  setSelectedCall(null)
-                                  setApplicationMessage('')
-                                }}
-                                className="flex-1"
-                              >
-                                Cancel
-                              </Button>
-                              <Button 
-                                onClick={() => handleApply(selectedCall.id)}
-                                disabled={isApplying}
-                                className="flex-1"
-                              >
-                                {isApplying ? 'Applying...' : 'Submit Application'}
-                              </Button>
-                            </div>
                           </div>
-                        )}
-                      </DialogContent>
-                    </Dialog>
-                  )}
-                  
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={getProfileLink(call)}>
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      View Profile
-                    </Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        }
-      </div>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <h3 className="text-lg font-medium">No applications yet</h3>
+              <p className="text-muted-foreground">Applications to your open calls will appear here</p>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* Application Dialog */}
+      <Dialog open={!!selectedCall} onOpenChange={() => setSelectedCall(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Apply to Open Call</DialogTitle>
+            <DialogDescription>
+              Send your application for this {selectedCall?.role} position.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Role</Label>
+              <p className="text-sm font-medium">{selectedCall?.role}</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Genre</Label>
+              <p className="text-sm">{selectedCall?.genre}</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <p className="text-sm text-muted-foreground">{selectedCall?.description}</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="application-message">Your Message (Optional)</Label>
+              <Textarea
+                id="application-message"
+                placeholder="Tell them why you're perfect for this role..."
+                value={applicationMessage}
+                onChange={(e) => setApplicationMessage(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedCall(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleApplyToCall} disabled={isApplying}>
+              {isApplying ? 'Applying...' : 'Submit Application'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 } 

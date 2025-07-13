@@ -96,7 +96,7 @@ export default function StudioProfilePage() {
       loadStudioData()
       fetchBookingRequests()
     }
-  }, [user?.id])
+  }, [user?.id]) // Add proper dependency array
 
   const loadStudioData = async () => {
     if (!user?.email && !user?.id) return
@@ -168,47 +168,49 @@ export default function StudioProfilePage() {
       console.log('⚠️ [Profile] API data not available, falling back to localStorage')
       
       // Fallback to localStorage if API fails or no data found
-      const userKey = user.email || user.id
-      const savedStudioData = localStorage.getItem(`studioProfileData_${userKey}`)
-      const savedRoomsData = localStorage.getItem(`studioRoomsData_${userKey}`)
-      const savedStaffData = localStorage.getItem(`studioStaffData_${userKey}`)
-      
-      if (savedStudioData) {
-        const parsedStudioData = JSON.parse(savedStudioData)
-        let updatedData = { ...studioData, ...parsedStudioData }
+      const userKey = user?.email || user?.id
+      if (userKey) {
+        const savedStudioData = localStorage.getItem(`studioProfileData_${userKey}`)
+        const savedRoomsData = localStorage.getItem(`studioRoomsData_${userKey}`)
+        const savedStaffData = localStorage.getItem(`studioStaffData_${userKey}`)
         
-        // Fix gallery images mapping - edit page saves as galleryImages, display uses gallery
-        if (parsedStudioData.galleryImages) {
-          updatedData = { ...updatedData, gallery: parsedStudioData.galleryImages }
+        if (savedStudioData) {
+          const parsedStudioData = JSON.parse(savedStudioData)
+          let updatedData = { ...studioData, ...parsedStudioData }
+          
+          // Fix gallery images mapping - edit page saves as galleryImages, display uses gallery
+          if (parsedStudioData.galleryImages) {
+            updatedData = { ...updatedData, gallery: parsedStudioData.galleryImages }
+          }
+          
+          // If rooms data is saved separately, merge it
+          if (savedRoomsData) {
+            const parsedRoomsData = JSON.parse(savedRoomsData)
+            updatedData = { ...updatedData, rooms: parsedRoomsData }
+          }
+          
+          // If staff data is saved separately, merge it
+          if (savedStaffData) {
+            const parsedStaffData = JSON.parse(savedStaffData)
+            updatedData = { ...updatedData, staff: parsedStaffData }
+          }
+          
+          setStudioData(updatedData)
+          console.log('📱 [Profile] Studio data loaded from localStorage')
+        } else {
+          // Load individual saved data if main data doesn't exist
+          if (savedRoomsData) {
+            const parsedRoomsData = JSON.parse(savedRoomsData)
+            setStudioData(prev => ({ ...prev, rooms: parsedRoomsData }))
+          }
+          
+          if (savedStaffData) {
+            const parsedStaffData = JSON.parse(savedStaffData)
+            setStudioData(prev => ({ ...prev, staff: parsedStaffData }))
+          }
+          
+          console.log('📱 [Profile] Individual data loaded from localStorage')
         }
-        
-        // If rooms data is saved separately, merge it
-        if (savedRoomsData) {
-          const parsedRoomsData = JSON.parse(savedRoomsData)
-          updatedData = { ...updatedData, rooms: parsedRoomsData }
-        }
-        
-        // If staff data is saved separately, merge it
-        if (savedStaffData) {
-          const parsedStaffData = JSON.parse(savedStaffData)
-          updatedData = { ...updatedData, staff: parsedStaffData }
-        }
-        
-        setStudioData(updatedData)
-        console.log('📱 [Profile] Studio data loaded from localStorage')
-      } else {
-        // Load individual saved data if main data doesn't exist
-        if (savedRoomsData) {
-          const parsedRoomsData = JSON.parse(savedRoomsData)
-          setStudioData(prev => ({ ...prev, rooms: parsedRoomsData }))
-        }
-        
-        if (savedStaffData) {
-          const parsedStaffData = JSON.parse(savedStaffData)
-          setStudioData(prev => ({ ...prev, staff: parsedStaffData }))
-        }
-        
-        console.log('📱 [Profile] Individual data loaded from localStorage')
       }
       console.timeEnd('loadStudioProfileData');
     } catch (error) {

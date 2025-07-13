@@ -1,3 +1,6 @@
+"use client"
+
+import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Search, Star } from "lucide-react"
@@ -7,6 +10,8 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 
 export default function HomePage() {
+  const [search, setSearch] = useState('')
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-10 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -65,6 +70,8 @@ export default function HomePage() {
                     type="text"
                     placeholder="Enter your city to find nearby studios"
                     className="pl-8 h-12 rounded-full"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
                   />
                   <Button 
                     className="absolute right-1 top-1 h-10 rounded-full px-4"
