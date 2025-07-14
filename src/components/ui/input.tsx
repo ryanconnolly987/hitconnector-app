@@ -6,7 +6,7 @@ export const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"in
   ({ value, onChange, ...props }, ref) => (
     <input
       ref={ref}
-      value={value}
+      value={value ?? ""}
       onChange={onChange}
       readOnly={onChange ? false : true}
       {...props}
