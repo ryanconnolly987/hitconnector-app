@@ -60,7 +60,15 @@ interface Studio {
 
 async function getStudioBySlugOrId(identifier: string): Promise<Studio | null> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/studios/${identifier}`, {
+    // For server-side rendering, we need to construct a proper URL
+    // In development, use localhost:3000, in production use the deployed URL
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? process.env.NEXT_PUBLIC_API_BASE_URL || 'https://your-domain.com'
+      : 'http://localhost:3000'
+    
+    const url = `${baseUrl}/api/studios/${identifier}`
+    
+    const response = await fetch(url, {
       cache: 'no-store' // Ensure fresh data
     })
     
