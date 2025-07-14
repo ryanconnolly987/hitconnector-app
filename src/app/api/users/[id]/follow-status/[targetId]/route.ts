@@ -26,15 +26,23 @@ export async function GET(
     const { id, targetId } = await params;
 
     const followsData = getFollows();
-    const follows = followsData.follows || [];
+    
+    // Handle both old and new data formats
+    let follows = followsData.follows || followsData || [];
+    
+    // If it's an array directly (new format), use it as is
+    if (Array.isArray(followsData)) {
+      follows = followsData;
+    }
 
     // Check if user (id) is following target (targetId)
+    // Support both followedId (old) and followingId (new) property names
     const isFollowing = follows.some(
-      (follow: any) => follow.followerId === id && follow.followedId === targetId
+      (follow: any) => follow.followerId === id && (follow.followingId === targetId || follow.followedId === targetId)
     );
 
-    // Calculate counts
-    const followersCount = follows.filter((f: any) => f.followedId === targetId).length;
+    // Calculate counts - support both property names for backward compatibility
+    const followersCount = follows.filter((f: any) => f.followingId === targetId || f.followedId === targetId).length;
     const followingCount = follows.filter((f: any) => f.followerId === id).length;
 
     return NextResponse.json({ 

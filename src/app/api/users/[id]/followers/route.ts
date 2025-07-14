@@ -65,12 +65,23 @@ export async function GET(
     }
 
     const followsData = getFollows();
-    const follows = followsData.follows || [];
+    
+    // Handle both old and new data formats
+    let follows = followsData.follows || followsData || [];
+    
+    // If it's an array directly (new format), use it as is
+    if (Array.isArray(followsData)) {
+      follows = followsData;
+    }
+    
     const users = getUsers();
     const studios = getStudios();
 
     // Get all users/studios following this user/studio
-    const userFollowers = follows.filter((follow: any) => follow.followedId === id);
+    // Support both followedId and followingId property names
+    const userFollowers = follows.filter((follow: any) => 
+      follow.followingId === id || follow.followedId === id
+    );
 
     const followers = userFollowers.map((follow: any) => {
       // First check if follower is a user

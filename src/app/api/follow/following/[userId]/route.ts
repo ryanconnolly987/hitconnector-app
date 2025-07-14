@@ -65,7 +65,15 @@ export async function GET(
     }
 
     const followsData = getFollows();
-    const follows = followsData.follows || [];
+    
+    // Handle both old and new data formats
+    let follows = followsData.follows || followsData || [];
+    
+    // If it's an array directly (new format), use it as is
+    if (Array.isArray(followsData)) {
+      follows = followsData;
+    }
+    
     const users = getUsers();
     const studios = getStudios();
 
@@ -73,8 +81,11 @@ export async function GET(
     const userFollows = follows.filter((follow: any) => follow.followerId === userId);
 
     const following = userFollows.map((follow: any) => {
+      // Support both followedId and followingId property names
+      const targetId = follow.followingId || follow.followedId;
+      
       // First check if it's a user
-      const user = users.find((u: any) => u.id === follow.followedId);
+      const user = users.find((u: any) => u.id === targetId);
       if (user) {
         return {
           id: user.id,
@@ -87,7 +98,7 @@ export async function GET(
       }
 
       // Then check if it's a studio
-      const studio = studios.find((s: any) => s.id === follow.followedId);
+      const studio = studios.find((s: any) => s.id === targetId);
       if (studio) {
         return {
           id: studio.id,
@@ -102,7 +113,7 @@ export async function GET(
 
       // Return unknown if not found
       return {
-        id: follow.followedId,
+        id: targetId,
         name: 'Unknown User',
         type: 'user',
         profileImage: '',
