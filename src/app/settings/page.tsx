@@ -50,7 +50,6 @@ interface ProfileData {
   phone: string
   bio: string
   location: string
-  website: string
   experience: string
   genres: string[]
   profileImage: string
@@ -81,7 +80,6 @@ export default function SettingsPage() {
     phone: '',
     bio: '',
     location: '',
-    website: '',
     experience: '',
     genres: [],
     profileImage: '',
@@ -128,7 +126,6 @@ export default function SettingsPage() {
             phone: userData.phone || '',
             bio: userData.bio || '',
             location: userData.location || '',
-            website: userData.website || '',
             experience: userData.experience || '',
             genres: userData.genres || [],
             profileImage: userData.profileImage || '',

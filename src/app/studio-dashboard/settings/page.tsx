@@ -34,7 +34,6 @@ export default function SettingsPage() {
     phone: "",
     studioName: "",
     bio: "",
-    website: "",
     timezone: "America/Los_Angeles",
     language: "en",
     profileImage: ""
@@ -109,7 +108,6 @@ export default function SettingsPage() {
               phone: studio.phone || '',
               studioName: studio.name || '',
               bio: studio.description || '',
-              website: studio.website || '',
               timezone: "America/Los_Angeles", // Default, could be stored in studio data
               language: "en", // Default, could be stored in studio data
               profileImage: studio.profileImage || ''
@@ -285,7 +283,6 @@ export default function SettingsPage() {
         name: accountData.studioName,
         email: accountData.email,
         phone: accountData.phone,
-        website: accountData.website,
         description: accountData.bio,
         profileImage: accountData.profileImage,
         owner: user?.email || user?.id
@@ -537,15 +534,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="website">Website</Label>
-                  <Input
-                    id="website"
-                    value={accountData.website}
-                    onChange={(e) => setAccountData(prev => ({ ...prev, website: e.target.value }))}
-                    placeholder="Enter your website URL"
-                  />
-                </div>
+
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
