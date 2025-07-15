@@ -99,11 +99,12 @@ function BookingDetailsPageClient({ bookingId }: { bookingId: string }) {
       const method = 'PUT'
       let body = {}
       
-      if (action === 'cancel') {
+      if (action === 'approve') {
+        endpoint = `${API_BASE_URL}/api/bookings/${booking.id}/accept`
+      } else if (action === 'reject') {
+        endpoint = `${API_BASE_URL}/api/bookings/${booking.id}/decline`
+      } else if (action === 'cancel') {
         endpoint = `${API_BASE_URL}/api/bookings/${booking.id}/cancel`
-      } else {
-        endpoint = `${API_BASE_URL}/api/booking-requests/${booking.id}`
-        body = { action }
       }
       
       const response = await fetch(endpoint, {
@@ -146,7 +147,7 @@ function BookingDetailsPageClient({ bookingId }: { bookingId: string }) {
         })
       }
     } catch (error) {
-      console.error('Error handling booking action:', error)
+      console.error('Error updating booking status:', error)
       toast({
         title: "Error",
         description: "Failed to update booking. Please try again.",

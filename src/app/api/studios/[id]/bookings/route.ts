@@ -66,9 +66,10 @@ export async function GET(
     const bookings = await getActiveBookings(studioId);
     const now = new Date();
     
-    const upcoming = bookings.filter((b: any) => b.endDateTime > now);
-    const past = bookings.filter((b: any) => b.endDateTime <= now);
-    const pending = bookings.filter((b: any) => b.status === 'pending');
+    // Filter by status using normalized status values
+    const pending = bookings.filter((b: any) => b.status === 'PENDING');
+    const upcoming = bookings.filter((b: any) => b.status === 'CONFIRMED' && b.endDateTime > now);
+    const past = bookings.filter((b: any) => b.status === 'COMPLETED' || (b.status === 'CONFIRMED' && b.endDateTime <= now));
 
     // Compute monthly revenue
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);

@@ -274,11 +274,11 @@ export default function StudioDashboardPage() {
       ))
 
       const endpoint = action === 'approve' 
-        ? `${API_BASE_URL}/api/booking-requests/${requestId}/confirm`
-        : `${API_BASE_URL}/api/booking-requests/${requestId}/decline`
+        ? `${API_BASE_URL}/api/bookings/${requestId}/accept`
+        : `${API_BASE_URL}/api/bookings/${requestId}/decline`
 
       const response = await fetch(endpoint, {
-        method: 'POST',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -338,6 +338,11 @@ export default function StudioDashboardPage() {
       (booking) => {
         // Ensure we have valid booking data
         if (!booking || !booking.date || !booking.startTime) {
+          return false
+        }
+        
+        // Only show CONFIRMED bookings in calendar (not PENDING)
+        if (booking.status !== 'CONFIRMED' && booking.status !== 'confirmed') {
           return false
         }
         
@@ -509,7 +514,11 @@ export default function StudioDashboardPage() {
                       {monthDays.map((day) => {
                         const dayString = format(day, "yyyy-MM-dd")
                         const isCurrentMonth = day.getMonth() === currentDate.getMonth()
-                        const dayBookings = bookings.filter(booking => booking.date === dayString)
+                        // Only show CONFIRMED bookings in calendar (not PENDING)
+                        const dayBookings = bookings.filter(booking => 
+                          booking.date === dayString && 
+                          (booking.status === 'CONFIRMED' || booking.status === 'confirmed')
+                        )
                         
                         return (
                           <div 

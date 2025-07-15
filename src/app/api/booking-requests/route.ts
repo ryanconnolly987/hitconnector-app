@@ -4,7 +4,7 @@ import path from 'path';
 import { stripe, calculateTotalWithFee, dollarsToCents } from '@/lib/stripe';
 import { findUserById } from '@/lib/user-store';
 
-const BOOKING_REQUESTS_FILE = path.join(process.cwd(), 'data', 'booking-requests.json');
+const BOOKINGS_FILE = path.join(process.cwd(), 'data', 'bookings.json'); // Updated to use unified bookings file
 const USERS_FILE = path.join(process.cwd(), 'data', 'users.json');
 const PROFILES_FILE = path.join(process.cwd(), 'data', 'user-profiles.json');
 
@@ -29,83 +29,90 @@ interface BookingRequest {
   message: string;
   staffId?: string | null;
   staffName?: string | null;
-  status: 'pending' | 'confirmed' | 'rejected';
+  status: 'PENDING' | 'CONFIRMED' | 'CANCELED'; // Updated to use unified status
   paymentIntentId?: string;
   paymentStatus?: 'authorized' | 'captured' | 'failed';
   createdAt: string;
   updatedAt: string;
 }
 
-// Ensure data directory exists
-function ensureDataDir() {
-  const dataDir = path.dirname(BOOKING_REQUESTS_FILE);
+// Helper functions to read/write unified bookings data
+function getBookings(): any[] {
+  try {
+    if (fs.existsSync(BOOKINGS_FILE)) {
+      const data = fs.readFileSync(BOOKINGS_FILE, 'utf8');
+      const parsed = JSON.parse(data);
+      return parsed.bookings || [];
+    }
+  } catch (error) {
+    console.error('Error reading bookings file:', error);
+  }
+  return [];
+}
+
+function saveBookings(bookings: any[]): void {
+  const dataDir = path.dirname(BOOKINGS_FILE);
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
   }
+  fs.writeFileSync(BOOKINGS_FILE, JSON.stringify({ bookings }, null, 2));
 }
 
-// Read booking requests from file
-function getBookingRequests(): BookingRequest[] {
-  ensureDataDir();
+// Helper functions for user data
+function getUsers(): any[] {
   try {
-    if (!fs.existsSync(BOOKING_REQUESTS_FILE)) {
-      fs.writeFileSync(BOOKING_REQUESTS_FILE, JSON.stringify({ bookingRequests: [] }, null, 2));
-      return [];
-    }
-    const data = fs.readFileSync(BOOKING_REQUESTS_FILE, 'utf8');
-    const parsed = JSON.parse(data);
-    return parsed.bookingRequests || [];
-  } catch (error) {
-    console.error('Error reading booking requests file:', error);
-    return [];
-  }
-}
-
-// Write booking requests to file
-function saveBookingRequests(bookingRequests: BookingRequest[]): void {
-  ensureDataDir();
-  try {
-    fs.writeFileSync(BOOKING_REQUESTS_FILE, JSON.stringify({ bookingRequests }, null, 2));
-  } catch (error) {
-    console.error('Error saving booking requests file:', error);
-    throw new Error('Failed to save booking request data');
-  }
-}
-
-// Helper function to get user info with profile data including avatar
-function getUserInfo(userId: string): { id: string; name: string; email: string; role: string; profileImage?: string; slug?: string } | null {
-  try {
-    // Get basic user info
-    let users: any[] = [];
     if (fs.existsSync(USERS_FILE)) {
-      const usersData = fs.readFileSync(USERS_FILE, 'utf8');
-      users = JSON.parse(usersData);
+      const data = fs.readFileSync(USERS_FILE, 'utf8');
+      const parsed = JSON.parse(data);
+      return parsed.users || [];
     }
-    
-    const user = users.find(u => u.id === userId);
-    if (!user) return null;
-
-    // Get profile info for avatar
-    let profiles: any[] = [];
-    if (fs.existsSync(PROFILES_FILE)) {
-      const profilesData = fs.readFileSync(PROFILES_FILE, 'utf8');
-      profiles = JSON.parse(profilesData);
-    }
-    
-    const profile = profiles.find(p => p.id === userId);
-    
-    return {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      profileImage: profile?.profileImage,
-      slug: user.slug
-    };
   } catch (error) {
-    console.error('Error getting user info:', error);
-    return null;
+    console.error('Error reading users file:', error);
   }
+  return [];
+}
+
+function getProfiles(): any[] {
+  try {
+    if (fs.existsSync(PROFILES_FILE)) {
+      const data = fs.readFileSync(PROFILES_FILE, 'utf8');
+      const parsed = JSON.parse(data);
+      return parsed.profiles || [];
+    }
+  } catch (error) {
+    console.error('Error reading profiles file:', error);
+  }
+  return [];
+}
+
+function getUserData(userId: string): any {
+  const users = getUsers();
+  const profiles = getProfiles();
+
+  const user = users.find((u: any) => u.id === userId);
+  const profile = profiles.find((p: any) => p.userId === userId);
+
+  if (profile) {
+    return {
+      id: userId,
+      name: profile.name || user?.name || 'Unknown',
+      email: user?.email || 'unknown@example.com',
+      profileImage: profile.profileImage,
+      slug: profile.slug
+    };
+  }
+
+  if (user) {
+    return {
+      id: userId,
+      name: user.name || 'Unknown',
+      email: user.email || 'unknown@example.com',
+      profileImage: null,
+      slug: null
+    };
+  }
+
+  return null;
 }
 
 export async function GET(request: NextRequest) {
@@ -113,36 +120,42 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const studioId = searchParams.get('studioId');
     const userId = searchParams.get('userId');
-    
-    const bookingRequests = getBookingRequests();
-    
-    // Filter by studioId or userId if provided
-    let filteredRequests = bookingRequests;
+
+    const bookings = getBookings();
+
     if (studioId) {
-      filteredRequests = filteredRequests.filter(req => req.studioId === studioId);
-    }
-    if (userId) {
-      filteredRequests = filteredRequests.filter(req => req.userId === userId);
-    }
-    
-    // Enhance booking requests with artist profile data for studio dashboard requests
-    if (studioId) {
-      filteredRequests = filteredRequests.map(request => {
-        const artistInfo = getUserInfo(request.userId);
+      // Return pending booking requests for studio dashboard
+      const pendingBookings = bookings.filter(booking => 
+        booking.studioId === studioId && 
+        (booking.status === 'pending' || booking.status === 'PENDING')
+      );
+
+      // Enhance with artist data
+      const enhancedBookings = pendingBookings.map(booking => {
+        const userData = getUserData(booking.userId);
         return {
-          ...request,
-          // Add artist profile data while preserving existing fields
-          artistId: request.userId,
-          artistName: artistInfo?.name || request.userName,
-          artistSlug: artistInfo?.slug,
-          artistProfilePicture: artistInfo?.profileImage
+          ...booking,
+          artistId: booking.userId,
+          artistName: userData?.name || booking.userName,
+          artistSlug: userData?.slug,
+          artistProfilePicture: userData?.profileImage
         };
       });
+
+      return NextResponse.json({ bookingRequests: enhancedBookings });
     }
-    
-    return NextResponse.json({ bookingRequests: filteredRequests }, { status: 200 });
+
+    if (userId) {
+      // Return user's booking requests
+      const userBookings = bookings.filter(booking => booking.userId === userId);
+      return NextResponse.json({ bookingRequests: userBookings });
+    }
+
+    // Return all booking requests
+    return NextResponse.json({ bookingRequests: bookings });
+
   } catch (error) {
-    console.error('GET booking-requests error:', error);
+    console.error('Error fetching booking requests:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -221,7 +234,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Create booking request with payment intent
+    // Create booking with PENDING status in unified bookings file
     const bookingRequest: BookingRequest = {
       id: `booking_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       studioId: bookingData.studioId,
@@ -243,29 +256,33 @@ export async function POST(request: NextRequest) {
       message: bookingData.message || '',
       staffId: bookingData.staffId || null,
       staffName: bookingData.staffName || null,
-      status: 'pending',
+      status: 'PENDING', // Ensure new bookings start with PENDING status
       paymentIntentId: paymentIntent.id,
       paymentStatus: 'authorized',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
 
-    // Save booking request
-    const bookingRequests = getBookingRequests();
-    bookingRequests.push(bookingRequest);
-    saveBookingRequests(bookingRequests);
-    
-    console.log('✅ Booking request created:', bookingRequest.id);
+    // Save to unified bookings file
+    const bookings = getBookings();
+    bookings.push(bookingRequest);
+    saveBookings(bookings);
+
     console.log('💳 PaymentIntent created:', paymentIntent.id);
-    
+    console.log('✅ Booking request created:', bookingRequest.id);
+
     return NextResponse.json({
       success: true,
-      booking: bookingRequest,
-      paymentIntentId: paymentIntent.id
+      bookingRequest: bookingRequest,
+      paymentIntent: {
+        id: paymentIntent.id,
+        client_secret: paymentIntent.client_secret,
+        status: paymentIntent.status
+      }
     });
 
   } catch (error) {
-    console.error('❌ Error creating booking request:', error);
+    console.error('Error creating booking request:', error);
     return NextResponse.json(
       { error: 'Failed to create booking request' },
       { status: 500 }

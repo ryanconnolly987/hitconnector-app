@@ -90,9 +90,10 @@ export async function GET(request: NextRequest) {
       const bookings = await getActiveBookings(studioId);
       const now = new Date();
       
-      const upcoming = bookings.filter((b: any) => b.endDateTime > now);
-      const past = bookings.filter((b: any) => b.endDateTime <= now);
-      const pending = bookings.filter((b: any) => b.status === 'pending');
+      // Filter by status using normalized status values
+      const pending = bookings.filter((b: any) => b.status === 'PENDING');
+      const upcoming = bookings.filter((b: any) => b.status === 'CONFIRMED' && b.endDateTime > now);
+      const past = bookings.filter((b: any) => b.status === 'COMPLETED' || (b.status === 'CONFIRMED' && b.endDateTime <= now));
       
       // Compute monthly revenue for studio dashboard requests
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -103,12 +104,15 @@ export async function GET(request: NextRequest) {
         .reduce((sum: number, b: any) => sum + b.totalCost, 0);
       
       return NextResponse.json({ pending, upcoming, past, revenue }, { status: 200 });
-    } else if (userId) {
+    }
+
+    if (userId) {
       // Artist view - only show confirmed bookings (not pending, cancelled, or rejected)
       const bookings = getBookings();
       const filteredBookings = bookings.filter(booking => 
         booking.userId === userId && 
-        (booking.status === 'confirmed' || booking.status === 'completed')
+        (booking.status === 'CONFIRMED' || booking.status === 'confirmed' || 
+         booking.status === 'COMPLETED' || booking.status === 'completed')
       );
       
       return NextResponse.json({ bookings: filteredBookings }, { status: 200 });

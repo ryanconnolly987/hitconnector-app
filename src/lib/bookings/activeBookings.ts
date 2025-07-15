@@ -33,6 +33,40 @@ function getUserInfo(userId: string): any {
   return null;
 }
 
+// Helper function to save bookings back to file
+function saveBookings(bookings: any[]): void {
+  const dataDir = path.dirname(BOOKINGS_FILE);
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+  fs.writeFileSync(BOOKINGS_FILE, JSON.stringify({ bookings }, null, 2));
+}
+
+// Auto-completion logic: move CONFIRMED bookings to COMPLETED when endDateTime < now
+function autoCompleteBookings(bookings: any[]): { updated: boolean, bookings: any[] } {
+  const now = new Date();
+  let updated = false;
+  
+  const updatedBookings = bookings.map((booking: any) => {
+    // Only auto-complete CONFIRMED bookings
+    if (booking.status === 'CONFIRMED' || booking.status === 'confirmed') {
+      const endDateTime = new Date(`${booking.date}T${booking.endTime}`);
+      if (endDateTime < now) {
+        updated = true;
+        return {
+          ...booking,
+          status: 'COMPLETED',
+          completedAt: now.toISOString(),
+          updatedAt: now.toISOString()
+        };
+      }
+    }
+    return booking;
+  });
+  
+  return { updated, bookings: updatedBookings };
+}
+
 export async function getActiveBookings(studioId: string) {
   try {
     if (!fs.existsSync(BOOKINGS_FILE)) {
@@ -41,13 +75,22 @@ export async function getActiveBookings(studioId: string) {
     
     const data = fs.readFileSync(BOOKINGS_FILE, 'utf8');
     const parsed = JSON.parse(data);
-    const allBookings = parsed.bookings || [];
+    let allBookings = parsed.bookings || [];
     
-    // Filter by studioId and exclude CANCELED bookings (canonical filter)
+    // Run auto-completion logic (nightly cron equivalent)
+    const { updated, bookings: updatedBookings } = autoCompleteBookings(allBookings);
+    if (updated) {
+      console.log('🔄 Auto-completed expired bookings');
+      saveBookings(updatedBookings);
+      allBookings = updatedBookings;
+    }
+    
+    // Filter by studioId and return all non-canceled bookings (status in ['PENDING','CONFIRMED','COMPLETED'])
     const filteredBookings = allBookings.filter((booking: any) => 
       booking.studioId === studioId && 
       booking.status !== 'CANCELED' && 
-      booking.status !== 'cancelled'  // Handle both cases
+      booking.status !== 'cancelled' &&
+      booking.status !== 'rejected'  // Also exclude rejected bookings
     );
     
     // Enhance with artist data (equivalent to Prisma include)
@@ -55,6 +98,10 @@ export async function getActiveBookings(studioId: string) {
       const artistInfo = getUserInfo(booking.userId);
       return {
         ...booking,
+        // Normalize status to uppercase for consistent filtering
+        status: booking.status === 'pending' ? 'PENDING' : 
+               booking.status === 'confirmed' ? 'CONFIRMED' : 
+               booking.status === 'completed' ? 'COMPLETED' : booking.status,
         artist: artistInfo ? {
           displayName: artistInfo.name || booking.userName,
           slug: artistInfo.slug,

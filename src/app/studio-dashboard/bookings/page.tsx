@@ -163,12 +163,16 @@ export default function BookingsPage() {
     try {
       console.log(`📋 [Bookings] ${action}ing booking request:`, requestId)
       
-      const response = await fetch(`${API_BASE_URL}/api/booking-requests/${requestId}`, {
+      const endpoint = action === 'approve' 
+        ? `${API_BASE_URL}/api/bookings/${requestId}/accept`
+        : `${API_BASE_URL}/api/bookings/${requestId}/decline`
+
+      const response = await fetch(endpoint, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({}),
       })
 
       if (response.ok) {
