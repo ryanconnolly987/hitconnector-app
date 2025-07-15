@@ -1523,11 +1523,17 @@ function StudioProfileContent() {
                     <Label>Cover Image</Label>
                     <div className="mt-2">
                       <Label htmlFor="cover-upload" className="cursor-pointer">
-                        <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center hover:bg-muted/20 transition-colors">
-                          <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                          <p className="text-sm text-muted-foreground">
-                            Click to upload or drag and drop your cover image
-                          </p>
+                        <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg overflow-hidden hover:bg-muted/20 transition-colors">
+                          {studioData.coverImage ? (
+                            <img src={studioData.coverImage} className="h-32 w-full object-cover rounded-md" alt="Cover preview" />
+                          ) : (
+                            <div className="p-8 text-center">
+                              <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                              <p className="text-sm text-muted-foreground">
+                                Click to upload or drag and drop your cover image
+                              </p>
+                            </div>
+                          )}
                         </div>
                         <input
                           id="cover-upload"
