@@ -623,35 +623,27 @@ export default function StudioDashboardPage() {
                       bookingRequests.filter(request => request && request.id).map((request, index) => (
                         <div key={request.id || `request-${index}`} className="border rounded-lg p-4 space-y-3">
                           <div className="flex items-center gap-3">
-                            <Avatar>
-                              <AvatarImage src="/placeholder.svg" alt={request.userName} />
-                              <AvatarFallback>{request.userName?.charAt(0) || 'U'}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">{request.userName}</span>
-                                {request.userId && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 p-0"
-                                    asChild
-                                  >
-                                    {getArtistProfileLink(request.userSlug, request.userId) ? (
-                                      <Link 
-                                        href={getArtistProfileLink(request.userSlug, request.userId)!}
-                                        title={`View ${request.userName}'s profile`}
-                                      >
-                                        <User className="h-3 w-3" />
-                                      </Link>
-                                    ) : (
-                                      <span title="Profile not available">
-                                        <User className="h-3 w-3" />
-                                      </span>
-                                    )}
-                                  </Button>
-                                )}
+                            {getArtistProfileLink(request.artistSlug || request.userSlug, request.artistId || request.userId) ? (
+                              <Link
+                                href={getArtistProfileLink(request.artistSlug || request.userSlug, request.artistId || request.userId)!}
+                                className="inline-flex items-center gap-2 group"
+                              >
+                                <Avatar>
+                                  <AvatarImage src={request.artistProfilePicture || "/placeholder.svg"} alt={request.artistName || request.userName} />
+                                  <AvatarFallback>{(request.artistName || request.userName)?.charAt(0) || 'U'}</AvatarFallback>
+                                </Avatar>
+                                <span className="group-hover:underline font-medium">{request.artistName || request.userName}</span>
+                              </Link>
+                            ) : (
+                              <div className="inline-flex items-center gap-2">
+                                <Avatar>
+                                  <AvatarImage src={request.artistProfilePicture || "/placeholder.svg"} alt={request.artistName || request.userName} />
+                                  <AvatarFallback>{(request.artistName || request.userName)?.charAt(0) || 'U'}</AvatarFallback>
+                                </Avatar>
+                                <span className="font-medium">{request.artistName || request.userName}</span>
                               </div>
+                            )}
+                            <div className="flex-1">
                               <div className="text-sm text-muted-foreground">{request.userEmail}</div>
                             </div>
                           </div>
@@ -737,29 +729,27 @@ export default function StudioDashboardPage() {
                   {bookings.filter(booking => booking && booking.id).map((booking, index) => (
                     <Card key={booking.id || `booking-${index}`}>
                       <CardHeader className="flex flex-row items-center gap-4 pb-2">
-                        <Avatar>
-                          <AvatarImage src="/placeholder.svg" alt={booking.userName} />
-                          <AvatarFallback>{booking.userName?.charAt(0) || 'U'}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold">{booking.userName}</h3>
-                            {getArtistProfileLink(booking.userSlug, booking.userId) && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0"
-                                asChild
-                              >
-                                <Link 
-                                  href={getArtistProfileLink(booking.userSlug, booking.userId)!}
-                                  title={`View ${booking.userName}'s profile`}
-                                >
-                                  <User className="h-3 w-3" />
-                                </Link>
-                              </Button>
-                            )}
+                        {getArtistProfileLink(booking.artistSlug || booking.userSlug, booking.artistId || booking.userId) ? (
+                          <Link
+                            href={getArtistProfileLink(booking.artistSlug || booking.userSlug, booking.artistId || booking.userId)!}
+                            className="inline-flex items-center gap-2 group"
+                          >
+                            <Avatar>
+                              <AvatarImage src={booking.artistProfilePicture || "/placeholder.svg"} alt={booking.artistName || booking.userName} />
+                              <AvatarFallback>{(booking.artistName || booking.userName)?.charAt(0) || 'U'}</AvatarFallback>
+                            </Avatar>
+                            <span className="group-hover:underline font-semibold">{booking.artistName || booking.userName}</span>
+                          </Link>
+                        ) : (
+                          <div className="inline-flex items-center gap-2">
+                            <Avatar>
+                              <AvatarImage src={booking.artistProfilePicture || "/placeholder.svg"} alt={booking.artistName || booking.userName} />
+                              <AvatarFallback>{(booking.artistName || booking.userName)?.charAt(0) || 'U'}</AvatarFallback>
+                            </Avatar>
+                            <span className="font-semibold">{booking.artistName || booking.userName}</span>
                           </div>
+                        )}
+                        <div className="flex-1">
                           <Badge variant={booking.status === "confirmed" ? "default" : "outline"}>
                             {booking.status === "confirmed" ? "Confirmed" : "Pending"}
                           </Badge>

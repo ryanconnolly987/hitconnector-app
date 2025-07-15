@@ -4,6 +4,8 @@ import path from 'path';
 
 const BOOKINGS_FILE = path.join(process.cwd(), 'data', 'bookings.json');
 const BOOKING_REQUESTS_FILE = path.join(process.cwd(), 'data', 'booking-requests.json');
+const USERS_FILE = path.join(process.cwd(), 'data', 'users.json');
+const PROFILES_FILE = path.join(process.cwd(), 'data', 'user-profiles.json');
 
 // Helper functions to read/write data
 function getBookings(): any[] {
@@ -55,6 +57,91 @@ function saveBookingRequests(bookingRequests: any[]): void {
   } catch (error) {
     console.error('Error saving booking requests file:', error);
     throw new Error('Failed to save booking request data');
+  }
+}
+
+// Helper function to get user info with profile data including avatar
+function getUserInfo(userId: string): { id: string; name: string; email: string; role: string; profileImage?: string; slug?: string } | null {
+  try {
+    // Get basic user info
+    let users: any[] = [];
+    if (fs.existsSync(USERS_FILE)) {
+      const usersData = fs.readFileSync(USERS_FILE, 'utf8');
+      users = JSON.parse(usersData);
+    }
+    
+    const user = users.find(u => u.id === userId);
+    if (!user) return null;
+
+    // Get profile info for avatar
+    let profiles: any[] = [];
+    if (fs.existsSync(PROFILES_FILE)) {
+      const profilesData = fs.readFileSync(PROFILES_FILE, 'utf8');
+      profiles = JSON.parse(profilesData);
+    }
+    
+    const profile = profiles.find(p => p.id === userId);
+    
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      profileImage: profile?.profileImage,
+      slug: user.slug
+    };
+  } catch (error) {
+    console.error('Error getting user info:', error);
+    return null;
+  }
+}
+
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id: bookingId } = await params;
+    
+    if (!bookingId) {
+      return NextResponse.json(
+        { error: 'Booking ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // First check confirmed bookings
+    const bookings = getBookings();
+    let booking = bookings.find(b => b.id === bookingId);
+
+    // If not found in confirmed bookings, check booking requests
+    if (!booking) {
+      const bookingRequests = getBookingRequests();
+      booking = bookingRequests.find(r => r.id === bookingId);
+    }
+
+    if (!booking) {
+      return NextResponse.json(
+        { error: 'Booking not found' },
+        { status: 404 }
+      );
+    }
+
+    // Enhance booking with artist profile data
+    const artistInfo = getUserInfo(booking.userId);
+    const enhancedBooking = {
+      ...booking,
+      artistId: booking.userId,
+      artistName: artistInfo?.name || booking.userName,
+      artistSlug: artistInfo?.slug,
+      artistProfilePicture: artistInfo?.profileImage
+    };
+
+    return NextResponse.json(enhancedBooking);
+
+  } catch (error) {
+    console.error('Error fetching booking details:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 

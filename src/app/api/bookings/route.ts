@@ -3,12 +3,50 @@ import fs from 'fs';
 import path from 'path';
 
 const BOOKINGS_FILE = path.join(process.cwd(), 'data', 'bookings.json');
+const USERS_FILE = path.join(process.cwd(), 'data', 'users.json');
+const PROFILES_FILE = path.join(process.cwd(), 'data', 'user-profiles.json');
 
 // Ensure data directory exists
 function ensureDataDir() {
   const dataDir = path.dirname(BOOKINGS_FILE);
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
+  }
+}
+
+// Helper function to get user info with profile data including avatar
+function getUserInfo(userId: string): { id: string; name: string; email: string; role: string; profileImage?: string; slug?: string } | null {
+  try {
+    // Get basic user info
+    let users: any[] = [];
+    if (fs.existsSync(USERS_FILE)) {
+      const usersData = fs.readFileSync(USERS_FILE, 'utf8');
+      users = JSON.parse(usersData);
+    }
+    
+    const user = users.find(u => u.id === userId);
+    if (!user) return null;
+
+    // Get profile info for avatar
+    let profiles: any[] = [];
+    if (fs.existsSync(PROFILES_FILE)) {
+      const profilesData = fs.readFileSync(PROFILES_FILE, 'utf8');
+      profiles = JSON.parse(profilesData);
+    }
+    
+    const profile = profiles.find(p => p.id === userId);
+    
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      profileImage: profile?.profileImage,
+      slug: user.slug
+    };
+  } catch (error) {
+    console.error('Error getting user info:', error);
+    return null;
   }
 }
 
@@ -59,6 +97,21 @@ export async function GET(request: NextRequest) {
         booking.userId === userId && 
         (booking.status === 'confirmed' || booking.status === 'completed')
       );
+    }
+    
+    // Enhance bookings with artist profile data for studio dashboard requests
+    if (studioId) {
+      filteredBookings = filteredBookings.map(booking => {
+        const artistInfo = getUserInfo(booking.userId);
+        return {
+          ...booking,
+          // Add artist profile data while preserving existing fields
+          artistId: booking.userId,
+          artistName: artistInfo?.name || booking.userName,
+          artistSlug: artistInfo?.slug,
+          artistProfilePicture: artistInfo?.profileImage
+        };
+      });
     }
     
     return NextResponse.json({ bookings: filteredBookings }, { status: 200 });
