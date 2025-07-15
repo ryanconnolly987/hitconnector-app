@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useFollow } from "@/hooks/use-follow"
 import { API_BASE_URL } from "@/lib/config"
 import OpenCallsTab from "@/components/open-calls-tab"
+import { buildArtistProfileHrefFromParams } from "@/lib/url-utils"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -332,30 +333,6 @@ export default function StudioDashboardPage() {
     }
   }
 
-  // Helper function to safely generate artist profile links
-  const getArtistProfileLink = (userSlug?: string, userId?: string): string | null => {
-    if (!userSlug && !userId) {
-      console.warn('Cannot create artist profile link: both userSlug and userId are undefined')
-      return null
-    }
-    
-    // Prefer slug over ID for SEO-friendly URLs
-    const identifier = userSlug || userId
-    
-    // Validate the identifier is not empty or invalid
-    if (!identifier || identifier === 'undefined' || identifier === 'null' || identifier.trim() === '') {
-      console.warn('Cannot create artist profile link: invalid identifier', { userSlug, userId })
-      return null
-    }
-    
-    return `/artist/${identifier}`
-  }
-
-  // Helper function to check if we can create a valid artist profile link
-  const canCreateArtistLink = (userSlug?: string, userId?: string): boolean => {
-    return getArtistProfileLink(userSlug, userId) !== null
-  }
-
   // Function to get bookings for a specific day and time slot
   const getBookingsForSlot = (date: string, timeSlot: string) => {
     return bookings.filter(
@@ -381,11 +358,13 @@ export default function StudioDashboardPage() {
           bookingTimeSlot = 'morning'
         } else if (hour >= 12 && hour < 17) {
           bookingTimeSlot = 'afternoon'
-        } else if (hour >= 17 && hour <= 23) {
+        } else if (hour >= 17 && hour < 22) {
           bookingTimeSlot = 'evening'
+        } else {
+          bookingTimeSlot = 'late'
         }
         
-        return bookingTimeSlot === timeSlot.toLowerCase()
+        return bookingTimeSlot === timeSlot
       }
     )
   }
@@ -494,9 +473,9 @@ export default function StudioDashboardPage() {
                                           className="h-4 w-4 p-0 ml-1"
                                           asChild
                                         >
-                                          {getArtistProfileLink(booking.userSlug, booking.userId) ? (
+                                          {buildArtistProfileHrefFromParams(booking.userSlug, booking.userId) ? (
                                             <Link 
-                                              href={getArtistProfileLink(booking.userSlug, booking.userId)!}
+                                              href={buildArtistProfileHrefFromParams(booking.userSlug, booking.userId)!}
                                               title={`View ${booking.userName}'s profile`}
                                             >
                                               <User className="h-3 w-3" />
@@ -555,9 +534,9 @@ export default function StudioDashboardPage() {
                                       className="h-3 w-3 p-0 ml-1"
                                       asChild
                                     >
-                                      {getArtistProfileLink(booking.userSlug, booking.userId) ? (
+                                      {buildArtistProfileHrefFromParams(booking.userSlug, booking.userId) ? (
                                         <Link 
-                                          href={getArtistProfileLink(booking.userSlug, booking.userId)!}
+                                          href={buildArtistProfileHrefFromParams(booking.userSlug, booking.userId)!}
                                           title={`View ${booking.userName}'s profile`}
                                         >
                                           <User className="h-2 w-2" />
@@ -623,9 +602,9 @@ export default function StudioDashboardPage() {
                       bookingRequests.filter(request => request && request.id).map((request, index) => (
                         <div key={request.id || `request-${index}`} className="border rounded-lg p-4 space-y-3">
                           <div className="flex items-center gap-3">
-                            {getArtistProfileLink(request.artistSlug || request.userSlug, request.artistId || request.userId) ? (
+                            {buildArtistProfileHrefFromParams(request.artistSlug || request.userSlug, request.artistId || request.userId) ? (
                               <Link
-                                href={getArtistProfileLink(request.artistSlug || request.userSlug, request.artistId || request.userId)!}
+                                href={buildArtistProfileHrefFromParams(request.artistSlug || request.userSlug, request.artistId || request.userId)!}
                                 className="inline-flex items-center gap-2 group"
                               >
                                 <Avatar>
@@ -729,9 +708,9 @@ export default function StudioDashboardPage() {
                   {bookings.filter(booking => booking && booking.id).map((booking, index) => (
                     <Card key={booking.id || `booking-${index}`}>
                       <CardHeader className="flex flex-row items-center gap-4 pb-2">
-                        {getArtistProfileLink(booking.artistSlug || booking.userSlug, booking.artistId || booking.userId) ? (
+                        {buildArtistProfileHrefFromParams(booking.artistSlug || booking.userSlug, booking.artistId || booking.userId) ? (
                           <Link
-                            href={getArtistProfileLink(booking.artistSlug || booking.userSlug, booking.artistId || booking.userId)!}
+                            href={buildArtistProfileHrefFromParams(booking.artistSlug || booking.userSlug, booking.artistId || booking.userId)!}
                             className="inline-flex items-center gap-2 group"
                           >
                             <Avatar>

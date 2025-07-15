@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUsers, findUserByEmail, saveUsers } from '@/lib/user-store';
 import { slugify } from '@/lib/utils';
+import { getCompleteArtistProfile } from '@/lib/profile-utils';
 import fs from 'fs';
 import path from 'path';
 
@@ -92,7 +93,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Get extended profile info
+    // For artist profiles, use the unified profile utils to ensure consistent rich data
+    if (user.role === 'rapper') {
+      const artistProfile = getCompleteArtistProfile(userId);
+      if (artistProfile) {
+        return NextResponse.json(artistProfile);
+      }
+    }
+
+    // For non-artist users, use the existing logic
     const profiles = getProfiles();
     const profile = profiles.find(p => p.id === userId);
 

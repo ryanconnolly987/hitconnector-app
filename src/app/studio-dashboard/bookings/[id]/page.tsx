@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
 import { API_BASE_URL } from "@/lib/config"
 import Link from "next/link"
+import { buildArtistProfileHrefFromParams } from "@/lib/url-utils"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -35,6 +36,8 @@ interface BookingDetails {
   status: 'pending' | 'approved' | 'confirmed' | 'rejected' | 'cancelled' | 'completed'
   createdAt: string
   approvedAt?: string
+  artistSlug?: string
+  artistId?: string
 }
 
 export default async function BookingDetailsPage({
@@ -258,19 +261,25 @@ function BookingDetailsPageClient({ bookingId }: { bookingId: string }) {
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="font-semibold text-lg">{booking.userName}</h3>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0"
-                        asChild
-                      >
-                        <Link 
-                          href={`/artist/${booking.userId}`}
-                          title={`View ${booking.userName}'s profile`}
+                      {buildArtistProfileHrefFromParams(booking.artistSlug, booking.artistId || booking.userId) ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          asChild
                         >
-                          <User className="h-3 w-3" />
-                        </Link>
-                      </Button>
+                          <Link 
+                            href={buildArtistProfileHrefFromParams(booking.artistSlug, booking.artistId || booking.userId)!}
+                            title={`View ${booking.userName}'s profile`}
+                          >
+                            <User className="h-3 w-3" />
+                          </Link>
+                        </Button>
+                      ) : (
+                        <span title="Profile not available">
+                          <User className="h-3 w-3 text-muted-foreground" />
+                        </span>
+                      )}
                     </div>
                     <p className="text-muted-foreground">{booking.userEmail}</p>
                   </div>

@@ -7,6 +7,7 @@ import { ArrowLeft, Calendar, Clock, User, DollarSign, Check, X, MessageSquare, 
 import { useAuth } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
 import { API_BASE_URL } from "@/lib/config"
+import { buildArtistProfileHrefFromParams } from "@/lib/url-utils"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -37,6 +38,11 @@ interface BookingRequest {
   message: string
   status: 'pending' | 'approved' | 'rejected'
   createdAt: string
+  // Enhanced artist profile fields from API
+  artistId?: string
+  artistName?: string
+  artistSlug?: string
+  artistProfilePicture?: string
 }
 
 interface Booking {
@@ -57,7 +63,11 @@ interface Booking {
   message: string
   status: 'confirmed' | 'completed' | 'cancelled'
   createdAt: string
-  approvedAt?: string
+  // Enhanced artist profile fields from API
+  artistId?: string
+  artistName?: string
+  artistSlug?: string
+  artistProfilePicture?: string
 }
 
 export default function BookingsPage() {
@@ -383,19 +393,25 @@ export default function BookingsPage() {
                           <div>
                             <div className="flex items-center gap-2">
                               <h3 className="font-semibold">{booking.userName}</h3>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0"
-                                asChild
-                              >
-                                <Link 
-                                  href={`/artist/${booking.userId}`}
-                                  title={`View ${booking.userName}'s profile`}
+                              {buildArtistProfileHrefFromParams(booking.artistSlug, booking.artistId || booking.userId) ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
+                                  asChild
                                 >
-                                  <User className="h-3 w-3" />
-                                </Link>
-                              </Button>
+                                  <Link 
+                                    href={buildArtistProfileHrefFromParams(booking.artistSlug, booking.artistId || booking.userId)!}
+                                    title={`View ${booking.userName}'s profile`}
+                                  >
+                                    <User className="h-3 w-3" />
+                                  </Link>
+                                </Button>
+                              ) : (
+                                <span title="Profile not available">
+                                  <User className="h-3 w-3 text-muted-foreground" />
+                                </span>
+                              )}
                             </div>
                             <p className="text-sm text-muted-foreground">{booking.userEmail}</p>
                           </div>
@@ -551,20 +567,26 @@ export default function BookingsPage() {
                         <div>
                           <div className="flex items-center gap-2">
                             <h3 className="font-semibold">{booking.userName}</h3>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
-                              asChild
-                            >
-                              <Link 
-                                href={`/artist/${booking.userId}`}
-                                title={`View ${booking.userName}'s profile`}
-                              >
-                                <User className="h-3 w-3" />
-                              </Link>
-                            </Button>
-                          </div>
+                            {buildArtistProfileHrefFromParams(booking.artistSlug, booking.artistId || booking.userId) ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
+                                  asChild
+                                >
+                                  <Link 
+                                    href={buildArtistProfileHrefFromParams(booking.artistSlug, booking.artistId || booking.userId)!}
+                                    title={`View ${booking.userName}'s profile`}
+                                  >
+                                    <User className="h-3 w-3" />
+                                  </Link>
+                                </Button>
+                              ) : (
+                                <span title="Profile not available">
+                                  <User className="h-3 w-3 text-muted-foreground" />
+                                </span>
+                              )}
+                            </div>
                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
                             <div className="flex items-center gap-1">
                               <Calendar className="h-4 w-4" />
@@ -722,20 +744,26 @@ export default function BookingsPage() {
                         <div>
                           <div className="flex items-center gap-2">
                             <h3 className="font-semibold">{booking.userName}</h3>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
-                              asChild
-                            >
-                              <Link 
-                                href={`/artist/${booking.userId}`}
-                                title={`View ${booking.userName}'s profile`}
-                              >
-                                <User className="h-3 w-3" />
-                              </Link>
-                            </Button>
-                          </div>
+                            {buildArtistProfileHrefFromParams(booking.artistSlug, booking.artistId || booking.userId) ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
+                                  asChild
+                                >
+                                  <Link 
+                                    href={buildArtistProfileHrefFromParams(booking.artistSlug, booking.artistId || booking.userId)!}
+                                    title={`View ${booking.userName}'s profile`}
+                                  >
+                                    <User className="h-3 w-3" />
+                                  </Link>
+                                </Button>
+                              ) : (
+                                <span title="Profile not available">
+                                  <User className="h-3 w-3 text-muted-foreground" />
+                                </span>
+                              )}
+                            </div>
                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
                             <div className="flex items-center gap-1">
                               <Calendar className="h-4 w-4" />
