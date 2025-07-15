@@ -87,14 +87,16 @@ export default function BookingsPage() {
     setLoading(true)
     try {
       console.time('fetchBookings');
-      const response = await fetch(`${API_BASE_URL}/api/booking-requests`)
-      if (!response.ok) {
+      
+      // Fetch booking requests
+      const requestsResponse = await fetch(`${API_BASE_URL}/api/booking-requests`)
+      if (!requestsResponse.ok) {
         throw new Error('Failed to fetch booking requests')
       }
-      const data = await response.json()
-      console.log('📥 [Bookings] Raw booking requests data:', data)
+      const requestsData = await requestsResponse.json()
+      console.log('📥 [Bookings] Raw booking requests data:', requestsData)
       
-      const validBookingRequests = (data.bookingRequests || []).filter((request: any) => {
+      const validBookingRequests = (requestsData.bookingRequests || []).filter((request: any) => {
         if (!request.id) {
           console.warn('⚠️ [Bookings] Found booking request without ID:', request)
           return false
@@ -104,12 +106,27 @@ export default function BookingsPage() {
       
       setBookingRequests(validBookingRequests)
       
+      // Fetch unified bookings data (returns partitioned structure)
       const bookingsResponse = await fetch(`${API_BASE_URL}/api/bookings`)
       if (bookingsResponse.ok) {
         const bookingsData = await bookingsResponse.json()
-        console.log('📥 [Bookings] Raw bookings data:', bookingsData)
+        console.log('📥 [Bookings] Unified bookings data:', bookingsData)
         
-        const validBookings = (bookingsData.bookings || []).filter((booking: any) => {
+        // Handle both old format (for user bookings) and new format (for studio bookings)
+        let allBookings = []
+        if (bookingsData.pending || bookingsData.upcoming || bookingsData.past) {
+          // New partitioned format - combine all bookings
+          allBookings = [
+            ...(bookingsData.pending || []),
+            ...(bookingsData.upcoming || []),
+            ...(bookingsData.past || [])
+          ]
+        } else {
+          // Old format - direct bookings array
+          allBookings = bookingsData.bookings || []
+        }
+        
+        const validBookings = allBookings.filter((booking: any) => {
           if (!booking.id) {
             console.warn('⚠️ [Bookings] Found booking without ID:', booking)
             return false

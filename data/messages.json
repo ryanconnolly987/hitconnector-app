@@ -34,7 +34,7 @@
       "receiverId": "user_1752282648868_83wk66ylh",
       "text": "Hello! This is a test message from the updated messaging system with proper user info and avatars! 🎵",
       "timestamp": "2025-07-13T04:53:57.492Z",
-      "read": false
+      "read": true
     },
     {
       "id": "1752382845091jduywqtrt",
@@ -70,7 +70,7 @@
       "receiverId": "user_1752282648868_83wk66ylh",
       "text": "holy shit it is",
       "timestamp": "2025-07-14T23:56:42.116Z",
-      "read": false
+      "read": true
     },
     {
       "id": "1752537409440lugetg15l",
@@ -79,7 +79,7 @@
       "receiverId": "user_1752282648868_83wk66ylh",
       "text": "wtf",
       "timestamp": "2025-07-14T23:56:49.440Z",
-      "read": false
+      "read": true
     },
     {
       "id": "1752537424620ofn8ytzil",
@@ -88,7 +88,7 @@
       "receiverId": "user_1752282648868_83wk66ylh",
       "text": "oh bet yee we're gucci",
       "timestamp": "2025-07-14T23:57:04.620Z",
-      "read": false
+      "read": true
     },
     {
       "id": "1752537469883by4b6g3gb",
@@ -163,7 +163,7 @@
       ],
       "updatedAt": "2025-07-14T23:57:49.883Z",
       "unreadCount": {
-        "user_1752282648868_83wk66ylh": 4,
+        "user_1752282648868_83wk66ylh": 0,
         "user_1752282588234_3wnbsnjw6": 5
       },
       "lastMessage": {
@@ -174,6 +174,9 @@
         "text": "worddd",
         "timestamp": "2025-07-14T23:57:49.883Z",
         "read": false
+      },
+      "lastReadAt": {
+        "user_1752282648868_83wk66ylh": "2025-07-15T10:46:28.319Z"
       }
     }
   ]

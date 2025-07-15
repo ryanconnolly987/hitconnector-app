@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { selectActiveBookings, partitionBookings } from '@/lib/bookingUtils';
 
 const BOOKINGS_FILE = path.join(process.cwd(), 'data', 'bookings.json');
 const USERS_FILE = path.join(process.cwd(), 'data', 'users.json');
@@ -84,37 +85,42 @@ export async function GET(request: NextRequest) {
     const studioId = searchParams.get('studioId');
     const userId = searchParams.get('userId');
     
-    const bookings = getBookings();
-    
-    // Filter by studioId or userId if provided
-    let filteredBookings = bookings;
     if (studioId) {
-      filteredBookings = filteredBookings.filter(booking => booking.studioId === studioId);
-    }
-    if (userId) {
-      // For artists, only show confirmed bookings (not pending, cancelled, or rejected)
-      filteredBookings = filteredBookings.filter(booking => 
-        booking.userId === userId && 
-        (booking.status === 'confirmed' || booking.status === 'completed')
-      );
-    }
-    
-    // Enhance bookings with artist profile data for studio dashboard requests
-    if (studioId) {
-      filteredBookings = filteredBookings.map(booking => {
+      // Use unified booking helper for studio requests
+      const activeBookings = selectActiveBookings(studioId);
+      
+      // Enhance with artist profile data
+      const enhancedBookings = activeBookings.map(booking => {
         const artistInfo = getUserInfo(booking.userId);
         return {
           ...booking,
-          // Add artist profile data while preserving existing fields
           artistId: booking.userId,
           artistName: artistInfo?.name || booking.userName,
           artistSlug: artistInfo?.slug,
           artistProfilePicture: artistInfo?.profileImage
         };
       });
+      
+      // Partition into pending, upcoming, and past
+      const partitioned = partitionBookings(enhancedBookings);
+      
+      return NextResponse.json(partitioned, { status: 200 });
     }
     
-    return NextResponse.json({ bookings: filteredBookings }, { status: 200 });
+    if (userId) {
+      // For artists, show their bookings
+      const bookings = getBookings();
+      const userBookings = bookings.filter(booking => 
+        booking.userId === userId && 
+        (booking.status === 'confirmed' || booking.status === 'completed')
+      );
+      
+      return NextResponse.json({ bookings: userBookings }, { status: 200 });
+    }
+    
+    // Default: return all bookings
+    const bookings = getBookings();
+    return NextResponse.json({ bookings }, { status: 200 });
   } catch (error) {
     console.error('GET bookings error:', error);
     return NextResponse.json(

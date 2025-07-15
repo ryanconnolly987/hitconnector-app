@@ -151,8 +151,8 @@ export default function StudioDashboardPage() {
           const studio = userStudios[0] // Get the first studio
           console.log('🎯 [Dashboard] Using studio:', { id: studio.id, name: studio.name })
           
-          // Parallel fetch for better performance - fetch both booking requests and confirmed bookings
-          const [bookingRequestsResponse, confirmedBookingsResponse] = await Promise.all([
+          // Fetch unified booking data and booking requests
+          const [bookingRequestsResponse, unifiedBookingsResponse] = await Promise.all([
             fetch(`${API_BASE_URL}/api/booking-requests?studioId=${studio.id}`),
             fetch(`${API_BASE_URL}/api/bookings?studioId=${studio.id}`)
           ])
@@ -176,8 +176,8 @@ export default function StudioDashboardPage() {
             name: studio.name || "Studio",
             avatar: studio.profileImage || "/placeholder.svg?height=40&width=40",
             email: studio.email || user.email || "",
-            rating: actualRating, // Use calculated rating instead of hardcoded 4.8
-            reviewCount: actualReviewCount, // Use actual review count
+            rating: actualRating,
+            reviewCount: actualReviewCount,
             profileImage: studio.profileImage || ""
           })
           
@@ -186,52 +186,53 @@ export default function StudioDashboardPage() {
             hasProfileImage: !!studio.profileImage
           })
           
-          // Process booking requests
+          // Process booking requests (still from the separate endpoint for pending requests)
           if (bookingRequestsResponse.ok) {
             const requestsData = await bookingRequestsResponse.json()
-              console.log(`✅ [Dashboard] Found ${requestsData.bookingRequests?.length || 0} booking requests`)
-              
-              // Validate and filter booking requests - only show pending ones
-              const validRequests = (requestsData.bookingRequests || []).filter((request: any) => {
-                if (!request.id) {
-                  console.warn('⚠️ [Dashboard] Found booking request without ID:', request)
-                  return false
-                }
-                // Only show pending requests to prevent repeat acceptance
-                // Filter out approved, rejected, and confirmed requests
-                if (request.status && request.status !== 'pending') {
-                  console.log(`🔍 [Dashboard] Filtering out non-pending request (${request.status}):`, request.id)
-                  return false
-                }
-                return true
-              })
-              
-              console.log(`🔍 [Dashboard] Valid pending booking requests: ${validRequests.length}/${requestsData.bookingRequests?.length || 0}`)
-              setBookingRequests(validRequests)
-            } else {
-              console.log(`❌ [Dashboard] Failed to fetch booking requests`)
-              setBookingRequests([])
-            }
+            console.log(`✅ [Dashboard] Found ${requestsData.bookingRequests?.length || 0} booking requests`)
+            
+            // Only show pending booking requests
+            const validRequests = (requestsData.bookingRequests || []).filter((request: any) => {
+              if (!request.id) {
+                console.warn('⚠️ [Dashboard] Found booking request without ID:', request)
+                return false
+              }
+              if (request.status && request.status !== 'pending') {
+                console.log(`🔍 [Dashboard] Filtering out non-pending request (${request.status}):`, request.id)
+                return false
+              }
+              return true
+            })
+            
+            console.log(`🔍 [Dashboard] Valid pending booking requests: ${validRequests.length}/${requestsData.bookingRequests?.length || 0}`)
+            setBookingRequests(validRequests)
+          } else {
+            console.log(`❌ [Dashboard] Failed to fetch booking requests`)
+            setBookingRequests([])
+          }
 
-          // Process confirmed bookings
-          if (confirmedBookingsResponse.ok) {
-            const bookingsData = await confirmedBookingsResponse.json()
-              console.log(`✅ [Dashboard] Found ${bookingsData.bookings?.length || 0} confirmed bookings`)
-              
-              // Validate and filter bookings
-              const validBookings = (bookingsData.bookings || []).filter((booking: any) => {
-                if (!booking.id) {
-                  console.warn('⚠️ [Dashboard] Found booking without ID:', booking)
-                  return false
-                }
-                return true
-              })
-              
-              console.log(`🔍 [Dashboard] Valid bookings: ${validBookings.length}/${bookingsData.bookings?.length || 0}`)
-              setBookings(validBookings)
-            } else {
-              console.log(`❌ [Dashboard] Failed to fetch confirmed bookings`)
-              setBookings([])
+          // Process unified booking data (now returns partitioned structure)
+          if (unifiedBookingsResponse.ok) {
+            const bookingsData = await unifiedBookingsResponse.json()
+            console.log(`✅ [Dashboard] Received unified booking data:`, bookingsData)
+            
+            // Extract upcoming bookings from the partitioned response
+            const upcomingBookings = bookingsData.upcoming || []
+            
+            // Validate bookings
+            const validBookings = upcomingBookings.filter((booking: any) => {
+              if (!booking.id) {
+                console.warn('⚠️ [Dashboard] Found booking without ID:', booking)
+                return false
+              }
+              return true
+            })
+            
+            console.log(`🔍 [Dashboard] Valid upcoming bookings: ${validBookings.length}`)
+            setBookings(validBookings)
+          } else {
+            console.log(`❌ [Dashboard] Failed to fetch unified bookings`)
+            setBookings([])
           }
         } else {
           // No studio found, set defaults
