@@ -78,6 +78,7 @@ export default function BookingsPage() {
   const [responseMessage, setResponseMessage] = useState("")
   const [bookingRequests, setBookingRequests] = useState<BookingRequest[]>([])
   const [confirmedBookings, setConfirmedBookings] = useState<Booking[]>([])
+  const [revenue, setRevenue] = useState<number>(0)
   const [loading, setLoading] = useState(true)
   const [cancelLoading, setCancelLoading] = useState(false)
   const { user } = useAuth()
@@ -99,12 +100,13 @@ export default function BookingsPage() {
         studio.owner === user?.email || studio.owner === user?.id
       ) || []
       
-      if (userStudios.length === 0) {
-        console.warn('⚠️ [Bookings] No studio found for user')
-        setBookingRequests([])
-        setConfirmedBookings([])
-        return
-      }
+             if (userStudios.length === 0) {
+         console.warn('⚠️ [Bookings] No studio found for user')
+         setBookingRequests([])
+         setConfirmedBookings([])
+         setRevenue(0)
+         return
+       }
       
       const studioId = userStudios[0].id
       
@@ -139,12 +141,14 @@ export default function BookingsPage() {
       
       setBookingRequests(validPendingRequests)
       setConfirmedBookings(validConfirmedBookings)
+      setRevenue(data.revenue || 0)
       
       console.timeEnd('fetchBookings');
     } catch (error) {
       console.error('❌ [Bookings] Error fetching booking requests:', error)
       setBookingRequests([])
       setConfirmedBookings([])
+      setRevenue(0)
       console.timeEnd('fetchBookings');
     } finally {
       setLoading(false)
@@ -384,8 +388,8 @@ export default function BookingsPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Revenue</p>
-                  <p className="text-2xl font-bold">${confirmedBookings.reduce((sum, b) => sum + b.totalCost, 0)}</p>
+                  <p className="text-sm font-medium text-muted-foreground">Monthly Revenue</p>
+                  <p className="text-2xl font-bold">${revenue}</p>
                 </div>
                 <DollarSign className="h-8 w-8 text-purple-600" />
               </div>

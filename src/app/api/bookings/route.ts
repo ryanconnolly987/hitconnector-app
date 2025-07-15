@@ -94,7 +94,15 @@ export async function GET(request: NextRequest) {
       const past = bookings.filter((b: any) => b.endDateTime <= now);
       const pending = bookings.filter((b: any) => b.status === 'pending');
       
-      return NextResponse.json({ pending, upcoming, past }, { status: 200 });
+      // Compute monthly revenue for studio dashboard requests
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+      
+      const revenue = bookings
+        .filter((b: any) => b.startDateTime >= monthStart && b.startDateTime <= monthEnd)
+        .reduce((sum: number, b: any) => sum + b.totalCost, 0);
+      
+      return NextResponse.json({ pending, upcoming, past, revenue }, { status: 200 });
     } else if (userId) {
       // Artist view - only show confirmed bookings (not pending, cancelled, or rejected)
       const bookings = getBookings();

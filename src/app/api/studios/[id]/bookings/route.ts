@@ -70,7 +70,15 @@ export async function GET(
     const past = bookings.filter((b: any) => b.endDateTime <= now);
     const pending = bookings.filter((b: any) => b.status === 'pending');
 
-    return NextResponse.json({ pending, upcoming, past }, { status: 200 });
+    // Compute monthly revenue
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    
+    const revenue = bookings
+      .filter((b: any) => b.startDateTime >= monthStart && b.startDateTime <= monthEnd)
+      .reduce((sum: number, b: any) => sum + b.totalCost, 0);
+
+    return NextResponse.json({ pending, upcoming, past, revenue }, { status: 200 });
   } catch (error) {
     console.error('GET studio bookings error:', error);
     return NextResponse.json(
