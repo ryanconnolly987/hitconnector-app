@@ -97,7 +97,7 @@ function BookingDetailsPageClient({ bookingId }: { bookingId: string }) {
       
       let endpoint = ''
       const method = 'PUT'
-      let body = {}
+      const body = {}
       
       if (action === 'approve') {
         endpoint = `${API_BASE_URL}/api/bookings/${booking.id}/accept`
