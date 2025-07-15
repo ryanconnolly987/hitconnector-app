@@ -296,7 +296,7 @@ function MessagesPageContent() {
     await loadConversationMessages(conversation.id)
   }
 
-  const handleSendMessage = async (text: string) => {
+  const handleSendMessage = async (text: string, attachment?: { type: 'attachment'; url: string; filename: string }) => {
     if (!selectedConversation || !user?.id || sending) return
 
     const otherParticipant = selectedConversation.participants.find(id => id !== user.id)
@@ -304,15 +304,23 @@ function MessagesPageContent() {
 
     setSending(true)
     try {
+      const messageData: any = {
+        conversationId: selectedConversation.id,
+        senderId: user.id,
+        receiverId: otherParticipant,
+        text
+      }
+
+      if (attachment) {
+        messageData.type = 'attachment'
+        messageData.attachmentUrl = attachment.url
+        messageData.attachmentFilename = attachment.filename
+      }
+
       const response = await fetch('/api/messages/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          conversationId: selectedConversation.id,
-          senderId: user.id,
-          receiverId: otherParticipant,
-          text
-        })
+        body: JSON.stringify(messageData)
       })
 
       if (response.ok) {

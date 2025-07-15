@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import { MessageInput } from './MessageInput'
 import { ConversationHeader } from './ConversationHeader'
+import { MessageBubble } from './MessageBubble'
 
 interface Message {
   id: string;
@@ -16,6 +17,9 @@ interface Message {
   text: string;
   timestamp: string;
   read: boolean;
+  type?: 'text' | 'attachment';
+  attachmentUrl?: string;
+  attachmentFilename?: string;
   senderInfo?: {
     id: string;
     name: string;
@@ -60,7 +64,7 @@ interface ChatPanelProps {
   messages: Message[];
   userCache: { [key: string]: UserInfo };
   currentUserId: string;
-  onSendMessage: (text: string) => Promise<void>;
+  onSendMessage: (text: string, attachment?: { type: 'attachment'; url: string; filename: string }) => Promise<void>;
   onBack?: () => void;
   loading?: boolean;
   sending?: boolean;
@@ -299,22 +303,10 @@ export function ChatPanel({
                     )}
                     
                     {/* Message bubble */}
-                    <div className={cn(
-                      "max-w-[70%] px-4 py-2 rounded-2xl",
-                      isFromCurrentUser 
-                        ? "bg-primary text-primary-foreground rounded-br-md" 
-                        : "bg-muted text-foreground rounded-bl-md"
-                    )}>
-                      <p className="text-sm whitespace-pre-wrap break-words">
-                        {message.text}
-                      </p>
-                      <p className={cn(
-                        "text-xs mt-1 opacity-70",
-                        isFromCurrentUser ? "text-primary-foreground" : "text-muted-foreground"
-                      )}>
-                        {formatMessageTime(message.timestamp)}
-                      </p>
-                    </div>
+                    <MessageBubble
+                      message={message}
+                      isFromCurrentUser={isFromCurrentUser}
+                    />
                   </div>
                 </div>
               );

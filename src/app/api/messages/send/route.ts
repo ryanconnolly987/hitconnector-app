@@ -14,6 +14,9 @@ interface Message {
   text: string;
   timestamp: string;
   read: boolean;
+  type?: 'text' | 'attachment';
+  attachmentUrl?: string;
+  attachmentFilename?: string;
 }
 
 interface Conversation {
@@ -136,13 +139,23 @@ function saveMessagesData(data: MessagesData): void {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { conversationId, senderId, receiverId, text } = body;
+    const { conversationId, senderId, receiverId, text, type, attachmentUrl, attachmentFilename } = body;
 
     if (!conversationId || !senderId || !receiverId || !text?.trim()) {
       return NextResponse.json(
         { error: 'conversationId, senderId, receiverId, and text are required' },
         { status: 400 }
       );
+    }
+
+    // For attachment messages, validate attachment fields
+    if (type === 'attachment') {
+      if (!attachmentUrl || !attachmentFilename) {
+        return NextResponse.json(
+          { error: 'attachmentUrl and attachmentFilename are required for attachment messages' },
+          { status: 400 }
+        );
+      }
     }
 
     if (senderId === receiverId) {
@@ -192,7 +205,12 @@ export async function POST(request: NextRequest) {
       receiverId,
       text: text.trim(),
       timestamp: new Date().toISOString(),
-      read: false
+      read: false,
+      type: type || 'text',
+      ...(type === 'attachment' && {
+        attachmentUrl,
+        attachmentFilename
+      })
     };
 
     data.messages.push(newMessage);
