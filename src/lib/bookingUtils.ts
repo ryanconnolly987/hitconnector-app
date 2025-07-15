@@ -20,6 +20,11 @@ interface Booking {
   artistName?: string;
   artistSlug?: string;
   artistProfilePicture?: string;
+  staffId?: string | null;
+  staffName?: string | null;
+  engineer?: {
+    displayName: string;
+  };
 }
 
 interface BookingRequest {

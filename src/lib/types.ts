@@ -53,4 +53,10 @@ export interface Booking {
   artistName?: string
   artistSlug?: string
   artistProfilePicture?: string | null
+  // Engineer preference
+  staffId?: string | null
+  staffName?: string | null
+  engineer?: {
+    displayName: string
+  }
 } 
