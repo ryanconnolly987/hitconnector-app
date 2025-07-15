@@ -79,13 +79,40 @@ export function ChatPanel({
   onConversationDeleted
 }: ChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // Scroll to bottom on conversation load or when new message arrives
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (conversation && messages.length > 0) {
+      scrollToBottomIfNearBottom();
+    }
+  }, [messages, conversation]);
+
+  // Scroll to bottom when conversation first loads
+  useEffect(() => {
+    if (conversation && messages.length > 0) {
+      // Always scroll to bottom when conversation first loads
+      scrollToBottom();
+    }
+  }, [conversation?.id]);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+    } else {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  const scrollToBottomIfNearBottom = () => {
+    if (scrollContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+      const isNearBottom = scrollTop + clientHeight >= scrollHeight - 50;
+      
+      if (isNearBottom) {
+        scrollToBottom();
+      }
+    }
   };
 
   const formatMessageTime = (timestamp: string) => {
@@ -220,7 +247,7 @@ export function ChatPanel({
       />
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-1">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-1">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full text-center text-muted-foreground">
             <div>
