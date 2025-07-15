@@ -62,6 +62,14 @@ export default function SettingsPage() {
     confirm: ""
   })
 
+  const [billing, setBilling] = useState<{
+    subscription: any | null,
+    paymentMethods: any[]
+  }>({
+    subscription: null,
+    paymentMethods: []
+  })
+
   // Load studio data on component mount
   useEffect(() => {
     const loadStudioData = async () => {
@@ -112,6 +120,17 @@ export default function SettingsPage() {
               language: "en", // Default, could be stored in studio data
               profileImage: studio.profileImage || ''
             })
+
+            // Load billing info
+            try {
+              const billingResponse = await fetch(`${API_BASE_URL}/api/billing/info?studioId=${studio.id}`)
+              if (billingResponse.ok) {
+                const billingData = await billingResponse.json()
+                setBilling(billingData)
+              }
+            } catch (error) {
+              console.error('❌ [Settings] Error loading billing info:', error)
+            }
           } else {
             console.log('⚠️ [Settings] No studio found for user, using defaults')
             // No studio found, set defaults with user data
@@ -821,37 +840,41 @@ export default function SettingsPage() {
                 <CardDescription>Manage your billing details and subscription</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="rounded-lg border p-4 bg-muted/20">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium">HitConnector Pro</h3>
-                      <p className="text-sm text-muted-foreground">Monthly subscription</p>
+                {billing.subscription && (
+                  <>
+                    <div className="rounded-lg border p-4 bg-muted/20">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-medium">HitConnector Pro</h3>
+                          <p className="text-sm text-muted-foreground">Monthly subscription</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">$29/month</p>
+                          <p className="text-sm text-muted-foreground">Next billing: Jan 15, 2024</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-medium">$29/month</p>
-                      <p className="text-sm text-muted-foreground">Next billing: Jan 15, 2024</p>
+
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span>Subscription Status</span>
+                        <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                          Active
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Payment Method</span>
+                        <span className="text-sm text-muted-foreground">•••• •••• •••• 4242</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Next Payment</span>
+                        <span className="text-sm text-muted-foreground">January 15, 2024</span>
+                      </div>
                     </div>
-                  </div>
-                </div>
 
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span>Subscription Status</span>
-                    <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                      Active
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Payment Method</span>
-                    <span className="text-sm text-muted-foreground">•••• •••• •••• 4242</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Next Payment</span>
-                    <span className="text-sm text-muted-foreground">January 15, 2024</span>
-                  </div>
-                </div>
-
-                <Separator />
+                    <Separator />
+                  </>
+                )}
 
                 <div className="space-y-4">
                   <h4 className="font-medium">Payment Methods</h4>
@@ -904,10 +927,12 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="flex justify-between pt-4">
-                  <Button variant="outline">Cancel Subscription</Button>
-                  <Button>Update Billing</Button>
-                </div>
+{billing.subscription && (
+                  <div className="flex justify-between pt-4">
+                    <Button variant="outline">Cancel Subscription</Button>
+                    <Button>Update Billing</Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
