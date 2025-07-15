@@ -327,19 +327,7 @@ export default function ArtistProfileClient({
               </Card>
             )}
 
-            {/* Contact */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Get in Touch</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Button asChild className="w-full">
-                  <a href={`mailto:${profile.email}`}>
-                    Send Message
-                  </a>
-                </Button>
-              </CardContent>
-            </Card>
+
           </div>
         </div>
       </div>
