@@ -7,6 +7,7 @@ import { ArrowLeft, Calendar, Clock, User, DollarSign, MessageSquare, X, CheckCi
 import { useAuth } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
 import { API_BASE_URL } from "@/lib/config"
+import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -255,7 +256,22 @@ function BookingDetailsPageClient({ bookingId }: { bookingId: string }) {
                     <AvatarFallback>{booking.userName.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <h3 className="font-semibold text-lg">{booking.userName}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-lg">{booking.userName}</h3>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        asChild
+                      >
+                        <Link 
+                          href={`/artist/${booking.userId}`}
+                          title={`View ${booking.userName}'s profile`}
+                        >
+                          <User className="h-3 w-3" />
+                        </Link>
+                      </Button>
+                    </div>
                     <p className="text-muted-foreground">{booking.userEmail}</p>
                   </div>
                 </div>

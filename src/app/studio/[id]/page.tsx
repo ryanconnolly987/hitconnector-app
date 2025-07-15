@@ -59,7 +59,7 @@ interface Studio {
 }
 
 async function getStudioBySlugOrId(identifier: string): Promise<Studio | null> {
-  try {
+      try {
     // For server-side rendering, we need to construct a proper URL
     // In development, use localhost:3000, in production use the deployed URL
     const baseUrl = process.env.NODE_ENV === 'production' 

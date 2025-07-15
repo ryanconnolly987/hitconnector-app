@@ -140,6 +140,34 @@
       "createdAt": "2025-07-15T00:00:55.733Z",
       "updatedAt": "2025-07-15T00:08:36.107Z",
       "confirmedAt": "2025-07-15T00:08:36.107Z"
+    },
+    {
+      "id": "booking_1752546491407_twyayi5sw",
+      "studioId": "studio_1752456531232_6pcbzlmh1",
+      "studioName": "The dojo",
+      "roomId": "room-1751157480708-fp2086",
+      "roomName": "studio a",
+      "userId": "user_1752282588234_3wnbsnjw6",
+      "userName": "Lil Ryry",
+      "userEmail": "ryanconnolly987@gmail.com",
+      "date": "2025-07-18",
+      "startTime": "17:00",
+      "endTime": "20:00",
+      "duration": 3,
+      "hourlyRate": 20,
+      "totalCost": 60,
+      "baseAmount": 60,
+      "companyFee": 1.8,
+      "totalAmount": 61.8,
+      "message": "",
+      "staffId": null,
+      "staffName": null,
+      "status": "confirmed",
+      "paymentIntentId": "pi_3RkybGHx5aQsAUd40704Svly",
+      "paymentStatus": "captured",
+      "createdAt": "2025-07-15T02:28:11.407Z",
+      "updatedAt": "2025-07-15T02:28:27.810Z",
+      "confirmedAt": "2025-07-15T02:28:27.810Z"
     }
   ]
 }

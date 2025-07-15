@@ -51,6 +51,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 
 export default function StudioDashboardPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
+  const [viewMode, setViewMode] = useState<'week' | 'month'>('week')
   const [bookingRequests, setBookingRequests] = useState<any[]>([])
   const [bookings, setBookings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -59,7 +60,7 @@ export default function StudioDashboardPage() {
     name: "Loading...",
     avatar: "/placeholder.svg?height=40&width=40",
     email: "",
-    rating: 0,
+    rating: 0, // Changed from 4.8 to 0 as default
     reviewCount: 0,
     profileImage: ""
   })
@@ -76,6 +77,41 @@ export default function StudioDashboardPage() {
     start: startOfCurrentWeek,
     end: addDays(startOfCurrentWeek, 6),
   })
+
+  // Generate month days for the calendar
+  const generateMonthDays = (date: Date) => {
+    const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1)
+    const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0)
+    const startOfCalendar = startOfWeek(startOfMonth, { weekStartsOn: 1 })
+    const endOfCalendar = addDays(startOfCalendar, 41) // 6 weeks * 7 days
+
+    return eachDayOfInterval({
+      start: startOfCalendar,
+      end: endOfCalendar,
+    })
+  }
+
+  const monthDays = generateMonthDays(currentDate)
+
+  // Helper function to get display range text
+  const getDisplayRangeText = () => {
+    if (viewMode === 'week') {
+      return `${format(weekDays[0], "MMM d")} - ${format(weekDays[6], "MMM d, yyyy")}`
+    } else {
+      return format(currentDate, "MMMM yyyy")
+    }
+  }
+
+  // Helper function to navigate calendar
+  const navigateCalendar = (direction: "prev" | "next") => {
+    if (viewMode === 'week') {
+      const days = direction === "prev" ? -7 : 7
+      setCurrentDate((prevDate) => addDays(prevDate, days))
+    } else {
+      const months = direction === "prev" ? -1 : 1
+      setCurrentDate((prevDate) => new Date(prevDate.getFullYear(), prevDate.getMonth() + months, 1))
+    }
+  }
 
   // Fetch studio data and bookings
   useEffect(() => {
@@ -121,12 +157,23 @@ export default function StudioDashboardPage() {
           const currentStudioId = studio.id || user.studioId
           setStudioId(currentStudioId)
           
+          // Calculate actual rating based on reviews
+          let actualRating = 0
+          let actualReviewCount = 0
+          
+          // Check if studio has reviews data
+          if (studio.reviews && Array.isArray(studio.reviews) && studio.reviews.length > 0) {
+            const totalRating = studio.reviews.reduce((sum: number, review: any) => sum + (review.rating || 0), 0)
+            actualReviewCount = studio.reviews.length
+            actualRating = totalRating / actualReviewCount
+          }
+          
           setStudioData({
             name: studio.name || "Studio",
             avatar: studio.profileImage || "/placeholder.svg?height=40&width=40",
             email: studio.email || user.email || "",
-            rating: studio.rating || 4.8, // Default or from API
-            reviewCount: studio.reviewCount || 0,
+            rating: actualRating, // Use calculated rating instead of hardcoded 4.8
+            reviewCount: actualReviewCount, // Use actual review count
             profileImage: studio.profileImage || ""
           })
           
@@ -285,10 +332,28 @@ export default function StudioDashboardPage() {
     }
   }
 
-  // Function to navigate weeks
-  const navigateWeek = (direction: "prev" | "next") => {
-    const days = direction === "prev" ? -7 : 7
-    setCurrentDate((prevDate) => addDays(prevDate, days))
+  // Helper function to safely generate artist profile links
+  const getArtistProfileLink = (userSlug?: string, userId?: string): string | null => {
+    if (!userSlug && !userId) {
+      console.warn('Cannot create artist profile link: both userSlug and userId are undefined')
+      return null
+    }
+    
+    // Prefer slug over ID for SEO-friendly URLs
+    const identifier = userSlug || userId
+    
+    // Validate the identifier is not empty or invalid
+    if (!identifier || identifier === 'undefined' || identifier === 'null' || identifier.trim() === '') {
+      console.warn('Cannot create artist profile link: invalid identifier', { userSlug, userId })
+      return null
+    }
+    
+    return `/artist/${identifier}`
+  }
+
+  // Helper function to check if we can create a valid artist profile link
+  const canCreateArtistLink = (userSlug?: string, userId?: string): boolean => {
+    return getArtistProfileLink(userSlug, userId) !== null
   }
 
   // Function to get bookings for a specific day and time slot
@@ -350,7 +415,7 @@ export default function StudioDashboardPage() {
                       />
                     ))}
                   </div>
-                  <span className="text-sm font-medium">{studioData.rating}</span>
+                  <span className="text-sm font-medium">{studioData.rating.toFixed(1)}</span>
                   <span className="text-sm text-muted-foreground ml-1">({studioData.reviewCount} reviews)</span>
                 </div>
                 {studioId && (
@@ -373,16 +438,16 @@ export default function StudioDashboardPage() {
                     <CardDescription>Manage your studio bookings</CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon" onClick={() => navigateWeek("prev")}>
+                    <Button variant="outline" size="icon" onClick={() => navigateCalendar("prev")}>
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
                     <span className="text-sm">
-                      {format(weekDays[0], "MMM d")} - {format(weekDays[6], "MMM d, yyyy")}
+                      {getDisplayRangeText()}
                     </span>
-                    <Button variant="outline" size="icon" onClick={() => navigateWeek("next")}>
+                    <Button variant="outline" size="icon" onClick={() => navigateCalendar("next")}>
                       <ChevronRight className="h-4 w-4" />
                     </Button>
-                    <Select defaultValue="week">
+                    <Select value={viewMode} onValueChange={(value: 'week' | 'month') => setViewMode(value)}>
                       <SelectTrigger className="w-[100px]">
                         <SelectValue placeholder="View" />
                       </SelectTrigger>
@@ -394,53 +459,129 @@ export default function StudioDashboardPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-8 gap-1 text-xs">
-                    <div className="font-medium text-center py-2"></div>
-                    {weekDays.map((day) => (
-                      <div key={day.toString()} className="font-medium text-center py-2">
-                        <div>{format(day, "EEE")}</div>
-                        <div className="text-lg">{format(day, "d")}</div>
-                      </div>
-                    ))}
-                    
-                    {["Morning", "Afternoon", "Evening"].map((timeSlot) => (
-                      <React.Fragment key={timeSlot}>
-                        <div className="font-medium py-3 pr-2 text-right">
-                          {timeSlot}
+                  {viewMode === 'week' ? (
+                    <div className="grid grid-cols-8 gap-1 text-xs">
+                      <div className="font-medium text-center py-2"></div>
+                      {weekDays.map((day) => (
+                        <div key={day.toString()} className="font-medium text-center py-2">
+                          <div>{format(day, "EEE")}</div>
+                          <div className="text-lg">{format(day, "d")}</div>
                         </div>
-                        {weekDays.map((day) => {
-                          const dayString = format(day, "yyyy-MM-dd")
-                          const slotBookings = getBookingsForSlot(dayString, timeSlot.toLowerCase())
-                          return (
-                            <div key={`${day.toString()}-${timeSlot}`} className="border rounded p-1 min-h-[60px] relative">
-                              {slotBookings.map((booking, index) => (
-                                <div
-                                  key={booking.id || `booking-${index}`}
-                                  className="bg-blue-100 text-blue-800 text-xs p-1 rounded mb-1 truncate"
-                                  title={`${booking.userName} - ${booking.startTime}-${booking.endTime}`}
-                                >
-                                  <div className="flex items-center justify-between">
-                                    <span>{booking.userName}</span>
-                                    {booking.userId && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-4 w-4 p-0 ml-1"
-                                        onClick={() => window.open(`/artist/${booking.userSlug || booking.userId}`, '_blank')}
-                                        title={`View ${booking.userName}'s profile`}
-                                      >
-                                        <User className="h-3 w-3" />
-                                      </Button>
-                                    )}
+                      ))}
+                      
+                      {["Morning", "Afternoon", "Evening"].map((timeSlot) => (
+                        <React.Fragment key={timeSlot}>
+                          <div className="font-medium py-3 pr-2 text-right">
+                            {timeSlot}
+                          </div>
+                          {weekDays.map((day) => {
+                            const dayString = format(day, "yyyy-MM-dd")
+                            const slotBookings = getBookingsForSlot(dayString, timeSlot.toLowerCase())
+                            return (
+                              <div key={`${day.toString()}-${timeSlot}`} className="border rounded p-1 min-h-[60px] relative">
+                                {slotBookings.map((booking, index) => (
+                                  <div
+                                    key={booking.id || `booking-${index}`}
+                                    className="bg-blue-100 text-blue-800 text-xs p-1 rounded mb-1 truncate"
+                                    title={`${booking.userName} - ${booking.startTime}-${booking.endTime}`}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <span>{booking.userName}</span>
+                                      {booking.userId && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-4 w-4 p-0 ml-1"
+                                          asChild
+                                        >
+                                          {getArtistProfileLink(booking.userSlug, booking.userId) ? (
+                                            <Link 
+                                              href={getArtistProfileLink(booking.userSlug, booking.userId)!}
+                                              title={`View ${booking.userName}'s profile`}
+                                            >
+                                              <User className="h-3 w-3" />
+                                            </Link>
+                                          ) : (
+                                            <span title="Profile not available">
+                                              <User className="h-3 w-3" />
+                                            </span>
+                                          )}
+                                        </Button>
+                                      )}
+                                    </div>
                                   </div>
+                                ))}
+                              </div>
+                            )
+                          })}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-7 gap-1 text-xs">
+                      {/* Day headers */}
+                      {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
+                        <div key={day} className="font-medium text-center py-2 bg-gray-50">
+                          {day}
+                        </div>
+                      ))}
+                      
+                      {/* Month days */}
+                      {monthDays.map((day) => {
+                        const dayString = format(day, "yyyy-MM-dd")
+                        const isCurrentMonth = day.getMonth() === currentDate.getMonth()
+                        const dayBookings = bookings.filter(booking => booking.date === dayString)
+                        
+                        return (
+                          <div 
+                            key={day.toString()} 
+                            className={`border rounded p-1 min-h-[80px] ${
+                              isCurrentMonth ? 'bg-white' : 'bg-gray-50 text-gray-400'
+                            }`}
+                          >
+                            <div className="text-sm font-medium mb-1">{format(day, "d")}</div>
+                            {dayBookings.slice(0, 3).map((booking, index) => (
+                              <div
+                                key={booking.id || `booking-${index}`}
+                                className="bg-blue-100 text-blue-800 text-xs p-1 rounded mb-1 truncate"
+                                title={`${booking.userName} - ${booking.startTime}-${booking.endTime}`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span>{booking.userName}</span>
+                                  {booking.userId && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-3 w-3 p-0 ml-1"
+                                      asChild
+                                    >
+                                      {getArtistProfileLink(booking.userSlug, booking.userId) ? (
+                                        <Link 
+                                          href={getArtistProfileLink(booking.userSlug, booking.userId)!}
+                                          title={`View ${booking.userName}'s profile`}
+                                        >
+                                          <User className="h-2 w-2" />
+                                        </Link>
+                                      ) : (
+                                        <span title="Profile not available">
+                                          <User className="h-2 w-2" />
+                                        </span>
+                                      )}
+                                    </Button>
+                                  )}
                                 </div>
-                              ))}
-                            </div>
-                          )
-                        })}
-                      </React.Fragment>
-                    ))}
-                  </div>
+                              </div>
+                            ))}
+                            {dayBookings.length > 3 && (
+                              <div className="text-xs text-gray-500">
+                                +{dayBookings.length - 3} more
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -494,10 +635,20 @@ export default function StudioDashboardPage() {
                                     variant="ghost"
                                     size="sm"
                                     className="h-6 w-6 p-0"
-                                    onClick={() => window.open(`/artist/${request.userSlug || request.userId}`, '_blank')}
-                                    title={`View ${request.userName}'s profile`}
+                                    asChild
                                   >
-                                    <User className="h-3 w-3" />
+                                    {getArtistProfileLink(request.userSlug, request.userId) ? (
+                                      <Link 
+                                        href={getArtistProfileLink(request.userSlug, request.userId)!}
+                                        title={`View ${request.userName}'s profile`}
+                                      >
+                                        <User className="h-3 w-3" />
+                                      </Link>
+                                    ) : (
+                                      <span title="Profile not available">
+                                        <User className="h-3 w-3" />
+                                      </span>
+                                    )}
                                   </Button>
                                 )}
                               </div>
@@ -592,16 +743,20 @@ export default function StudioDashboardPage() {
                         </Avatar>
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <CardTitle className="text-base">{booking.userName}</CardTitle>
-                            {booking.userId && (
+                            <h3 className="font-semibold">{booking.userName}</h3>
+                            {getArtistProfileLink(booking.userSlug, booking.userId) && (
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 className="h-6 w-6 p-0"
-                                onClick={() => window.open(`/artist/${booking.userSlug || booking.userId}`, '_blank')}
-                                title={`View ${booking.userName}'s profile`}
+                                asChild
                               >
-                                <User className="h-3 w-3" />
+                                <Link 
+                                  href={getArtistProfileLink(booking.userSlug, booking.userId)!}
+                                  title={`View ${booking.userName}'s profile`}
+                                >
+                                  <User className="h-3 w-3" />
+                                </Link>
                               </Button>
                             )}
                           </div>

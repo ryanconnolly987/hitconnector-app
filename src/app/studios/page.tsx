@@ -288,14 +288,14 @@ function StudioCard({ studio }: { studio: Studio }) {
                 <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                 <span className="text-sm">{studio.rating}</span>
                 <span className="text-sm text-muted-foreground">({studio.reviewCount} reviews)</span>
-              </div>
+          </div>
             )}
           </div>
           
           {studio.description && (
-            <p className="text-sm text-muted-foreground line-clamp-2">
-              {studio.description}
-            </p>
+          <p className="text-sm text-muted-foreground line-clamp-2">
+            {studio.description}
+          </p>
           )}
           
           {studio.specialties && studio.specialties.length > 0 && (

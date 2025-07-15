@@ -20,9 +20,11 @@ import {
 } from "lucide-react"
 import { useAuth } from "@/lib/auth"
 import { API_BASE_URL } from "@/lib/config"
-import { useFollowing } from "@/hooks/use-follow"
+import { useFollowing, useFollowers } from "@/hooks/use-follow"
 import { MusicPlayer } from "@/components/ui/music-player"
 import OpenCallsTab from "@/components/open-calls-tab"
+import { BookingDetailsCard } from "@/components/ui/booking-details-card"
+import { CalendarDropdown } from "@/components/ui/calendar-dropdown"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -41,6 +43,7 @@ import {
   SidebarProvider,
   SidebarInset,
 } from "@/components/ui/sidebar"
+import { Input } from "@/components/ui/input"
 
 interface DashboardSidebarProps {
   userName: string
@@ -62,11 +65,21 @@ export default function DashboardPage() {
     profileImage?: string
   }>({})
   const { following, loading: followingLoading } = useFollowing()
+  const { followers, loading: followersLoading } = useFollowers(user?.id)
+  const [activeFollowTab, setActiveFollowTab] = useState('following')
+  const [followSearchTerm, setFollowSearchTerm] = useState('')
   
   // Use authenticated user data or fallback
   const userName = user?.name || "User"
   const userEmail = user?.email || "user@example.com"
   const userInitials = userName.split(' ').map((n: string) => n[0]).join('').toUpperCase() || "U"
+
+  // Filter follow data based on search term and active tab
+  const filteredFollowData = (activeFollowTab === 'following' ? following : followers)
+    .filter((user: any) => 
+      user.name.toLowerCase().includes(followSearchTerm.toLowerCase()) ||
+      (user.location && user.location.toLowerCase().includes(followSearchTerm.toLowerCase()))
+    )
 
   // Fetch user's bookings
   useEffect(() => {
@@ -90,11 +103,11 @@ export default function DashboardPage() {
           const now = new Date()
           const upcoming = allBookings.filter((booking: any) => {
             const bookingDate = new Date(booking.date)
-            return bookingDate >= now
+            return bookingDate >= now && booking.status !== 'cancelled'
           })
           const past = allBookings.filter((booking: any) => {
             const bookingDate = new Date(booking.date)
-            return bookingDate < now
+            return bookingDate < now || booking.status === 'cancelled'
           })
           
           setUpcomingBookings(upcoming)
@@ -177,10 +190,12 @@ export default function DashboardPage() {
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm">
-                  <CalendarDays className="mr-2 h-4 w-4" />
-                  View Calendar
-                </Button>
+                <CalendarDropdown bookings={upcomingBookings}>
+                  <Button variant="outline" size="sm">
+                    <CalendarDays className="mr-2 h-4 w-4" />
+                    View Calendar
+                  </Button>
+                </CalendarDropdown>
                 <Link href="/find-studios">
                   <Button size="sm">
                     <Search className="mr-2 h-4 w-4" />
@@ -211,62 +226,46 @@ export default function DashboardPage() {
               </TabsList>
 
               <TabsContent value="overview" className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-4">
                   {upcomingBookings.map((booking) => (
-                    <Card key={booking.id}>
-                      <CardHeader className="flex flex-row items-center gap-4 pb-2">
-                        <div className="h-16 w-16 overflow-hidden rounded-md">
-                          <Image
-                            src={booking.studioImage || "/placeholder.svg"}
-                            alt={booking.studioName}
-                            width={80}
-                            height={80}
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                        <div>
-                          <CardTitle className="text-lg">{booking.studioName}</CardTitle>
-                          <Badge variant={booking.status === "confirmed" ? "default" : "outline"}>
-                            {booking.status === "confirmed" ? "Confirmed" : "Pending"}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pb-2">
-                        <div className="grid gap-2">
-                          <div className="flex items-center gap-2 text-sm">
-                            <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                            <span>{booking.date}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <span>{booking.time}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <MapPin className="h-4 w-4 text-muted-foreground" />
-                            <span>{booking.location}</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                      <CardFooter>
-                        <Button variant="outline" className="w-full" asChild>
-                          <Link href={`/bookings/${booking.id}`}>View Details</Link>
-                        </Button>
-                      </CardFooter>
-                    </Card>
+                    <BookingDetailsCard
+                      key={booking.id}
+                      booking={{
+                        id: booking.id,
+                        studioName: booking.studioName,
+                        studioImage: booking.studioImage,
+                        date: booking.date,
+                        startTime: booking.startTime,
+                        endTime: booking.endTime,
+                        time: booking.time,
+                        location: booking.location,
+                        status: booking.status
+                      }}
+                      onCancel={(bookingId) => {
+                        // Remove the cancelled booking from the list
+                        setUpcomingBookings(prev => prev.filter(b => b.id !== bookingId))
+                      }}
+                    />
                   ))}
 
-                  {upcomingBookings.length === 0 && (
-                    <div className="col-span-full flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+                  {upcomingBookings.length === 0 && !loading && (
+                    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
                       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-                        <Calendar className="h-6 w-6 text-muted-foreground" />
+                        <CalendarDays className="h-6 w-6 text-muted-foreground" />
                       </div>
                       <h3 className="mt-4 text-lg font-semibold">No upcoming bookings</h3>
                       <p className="mb-4 mt-2 text-sm text-muted-foreground">
-                        You don't have any upcoming studio sessions scheduled.
+                        Book your first studio session to get started.
                       </p>
                       <Button asChild>
                         <Link href="/find-studios">Find Studios</Link>
                       </Button>
+                    </div>
+                  )}
+
+                  {loading && (
+                    <div className="flex items-center justify-center p-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </div>
                   )}
                 </div>
@@ -381,59 +380,99 @@ export default function DashboardPage() {
               </TabsContent>
 
               <TabsContent value="following" className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {following.map((followedUser) => (
-                    <Card key={followedUser.id}>
-                      <CardHeader className="pb-2">
+                <div className="space-y-4">
+                  {/* Followers/Following Toggle and Search */}
+                  <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant={activeFollowTab === 'following' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setActiveFollowTab('following')}
+                      >
+                        Following ({following.length})
+                      </Button>
+                      <Button
+                        variant={activeFollowTab === 'followers' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setActiveFollowTab('followers')}
+                      >
+                        Followers ({followers.length})
+                      </Button>
+                    </div>
+                    <div className="w-full sm:w-64">
+                      <Input
+                        placeholder="Search users..."
+                        value={followSearchTerm}
+                        onChange={(e) => setFollowSearchTerm(e.target.value)}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Users List */}
+                  <div className="space-y-3">
+                    {filteredFollowData.map((followedUser) => (
+                      <div key={followedUser.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
                         <div className="flex items-center gap-3">
                           <Avatar className="h-12 w-12">
-                            <AvatarImage src={followedUser.profileImage || "/placeholder.svg"} alt={followedUser.name} />
-                            <AvatarFallback>{followedUser.name?.charAt(0) || 'U'}</AvatarFallback>
+                            <AvatarImage 
+                              src={followedUser.profileImage || "/placeholder.svg"} 
+                              alt={followedUser.name} 
+                            />
+                            <AvatarFallback>
+                              {followedUser.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                            </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
-                            <CardTitle className="text-base truncate">{followedUser.name}</CardTitle>
-                            <p className="text-sm text-muted-foreground capitalize">{followedUser.type}</p>
+                            <h3 className="font-semibold text-sm truncate">{followedUser.name}</h3>
+                            <p className="text-xs text-muted-foreground">
+                              {followedUser.type === 'studio' ? 'Recording Studio' : 'Artist'}
+                              {followedUser.location && ` • ${followedUser.location}`}
+                            </p>
+                            {followedUser.rating && (
+                              <div className="flex items-center gap-1 mt-1">
+                                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                                <span className="text-xs text-muted-foreground">{followedUser.rating}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
-                      </CardHeader>
-                      <CardContent className="pb-2">
-                        {followedUser.type === 'studio' && followedUser.rating && (
-                          <div className="flex items-center gap-1 text-sm">
-                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                            <span>{followedUser.rating} rating</span>
-                          </div>
-                        )}
-                      </CardContent>
-                      <CardFooter>
-                        <Button variant="outline" className="w-full" asChild>
+                        <Button variant="outline" size="sm" asChild>
                           <Link href={followedUser.type === 'studio' ? `/studio/${followedUser.slug || followedUser.id}` : `/artist/${followedUser.slug || followedUser.id}`}>
                             View Profile
                           </Link>
                         </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
-
-                  {following.length === 0 && !followingLoading && (
-                    <div className="col-span-full flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-                      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-                        <Heart className="h-6 w-6 text-muted-foreground" />
                       </div>
-                      <h3 className="mt-4 text-lg font-semibold">Not following anyone yet</h3>
-                      <p className="mb-4 mt-2 text-sm text-muted-foreground">
-                        Discover and follow your favorite studios and artists.
-                      </p>
-                      <Button asChild>
-                        <Link href="/find-studios">Discover Studios</Link>
-                      </Button>
-                    </div>
-                  )}
+                    ))}
 
-                  {followingLoading && (
-                    <div className="col-span-full flex items-center justify-center p-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                    </div>
-                  )}
+                    {filteredFollowData.length === 0 && !followingLoading && !followersLoading && (
+                      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                          <Heart className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                        <h3 className="mt-4 text-lg font-semibold">
+                          {activeFollowTab === 'following' ? 'Not following anyone yet' : 'No followers yet'}
+                        </h3>
+                        <p className="mb-4 mt-2 text-sm text-muted-foreground">
+                          {activeFollowTab === 'following' 
+                            ? 'Discover and follow your favorite studios and artists.'
+                            : 'Share your profile to gain followers.'
+                          }
+                        </p>
+                        {activeFollowTab === 'following' && (
+                          <Button asChild>
+                            <Link href="/find-studios">Discover Studios</Link>
+                          </Button>
+                        )}
+                      </div>
+                    )}
+
+                    {(followingLoading || followersLoading) && (
+                      <div className="flex items-center justify-center p-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </TabsContent>
 

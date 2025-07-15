@@ -27,8 +27,7 @@ function getUsers(): any[] {
       return [];
     }
     const data = fs.readFileSync(USERS_FILE, 'utf8');
-    const parsed = JSON.parse(data);
-    return parsed.users || [];
+    return Array.isArray(data) ? data : JSON.parse(data);
   } catch (error) {
     console.error('Error reading users file:', error);
     return [];
@@ -50,16 +49,57 @@ function getStudios(): any[] {
   }
 }
 
+// Enhanced function to get user info with studio data
+function getUserInfoWithStudio(userId: string, users: any[], studios: any[]): any {
+  const user = users.find((u: any) => u.id === userId);
+  if (!user) {
+    return {
+      id: userId,
+      name: 'Unknown User',
+      type: 'user',
+      profileImage: '',
+      location: '',
+      slug: ''
+    };
+  }
+
+  // If user is a studio, get studio information
+  if (user.role === 'studio' && user.studioId) {
+    const studio = studios.find((s: any) => s.id === user.studioId);
+    if (studio) {
+      return {
+        id: user.id,
+        name: studio.name || user.name,
+        type: 'studio',
+        profileImage: studio.profileImage || user.profileImage,
+        location: studio.location || user.location,
+        rating: studio.rating,
+        slug: studio.slug || user.slug
+      };
+    }
+  }
+
+  // Return regular user info
+  return {
+    id: user.id,
+    name: user.name,
+    type: user.role === 'studio' ? 'studio' : 'user',
+    profileImage: user.profileImage,
+    location: user.location,
+    slug: user.slug
+  };
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const { id: userId } = await params;
 
-    if (!id) {
+    if (!userId) {
       return NextResponse.json(
-        { error: 'id is required' },
+        { error: 'userId is required' },
         { status: 400 }
       );
     }
@@ -77,54 +117,21 @@ export async function GET(
     const users = getUsers();
     const studios = getStudios();
 
-    // Get all users/studios following this user/studio
-    // Support both followedId and followingId property names
-    const userFollowers = follows.filter((follow: any) => 
-      follow.followingId === id || follow.followedId === id
-    );
+    // Get all users who are following this user
+    const userFollowers = follows.filter((follow: any) => {
+      // Support both followedId and followingId property names
+      const targetId = follow.followingId || follow.followedId;
+      return targetId === userId;
+    });
 
     const followers = userFollowers.map((follow: any) => {
-      // First check if follower is a user
-      const user = users.find((u: any) => u.id === follow.followerId);
-      if (user) {
-        return {
-          id: user.id,
-          name: user.name,
-          type: 'user',
-          profileImage: user.profileImage,
-          location: user.location,
-          slug: user.slug
-        };
-      }
-
-      // Then check if follower is a studio
-      const studio = studios.find((s: any) => s.id === follow.followerId);
-      if (studio) {
-        return {
-          id: studio.id,
-          name: studio.name,
-          type: 'studio',
-          profileImage: studio.profileImage,
-          location: studio.location,
-          rating: studio.rating,
-          slug: studio.slug
-        };
-      }
-
-      // Return unknown if not found
-      return {
-        id: follow.followerId,
-        name: 'Unknown User',
-        type: 'user',
-        profileImage: '',
-        location: '',
-        slug: ''
-      };
+      const followerId = follow.followerId;
+      return getUserInfoWithStudio(followerId, users, studios);
     });
 
     return NextResponse.json({ followers });
   } catch (error) {
-    console.error('Failed to fetch followers:', error);
+    console.error('Error fetching followers list:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

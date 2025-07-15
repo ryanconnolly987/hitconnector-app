@@ -27,12 +27,68 @@ function getUsers(): any[] {
       return [];
     }
     const data = fs.readFileSync(USERS_FILE, 'utf8');
-    const parsed = JSON.parse(data);
-    return parsed.users || [];
+    return Array.isArray(data) ? data : JSON.parse(data);
   } catch (error) {
     console.error('Error reading users file:', error);
     return [];
   }
+}
+
+// Enhanced function to get user info with studio data
+function getUserInfoWithStudio(userId: string, users: any[], studios: any[]): any {
+  // First check if it's a studio directly
+  const studio = studios.find((s: any) => s.id === userId);
+  if (studio) {
+    return {
+      id: studio.id,
+      name: studio.name,
+      type: 'studio',
+      profileImage: studio.profileImage,
+      location: studio.location,
+      rating: studio.rating,
+      slug: studio.slug
+    };
+  }
+
+  // Then check if it's a user
+  const user = users.find((u: any) => u.id === userId);
+  if (user) {
+    // If user is a studio role, get studio information
+    if (user.role === 'studio' && user.studioId) {
+      const userStudio = studios.find((s: any) => s.id === user.studioId);
+      if (userStudio) {
+        return {
+          id: user.id,
+          name: userStudio.name || user.name,
+          type: 'studio',
+          profileImage: userStudio.profileImage || user.profileImage,
+          location: userStudio.location || user.location,
+          rating: userStudio.rating,
+          slug: userStudio.slug || user.slug
+        };
+      }
+    }
+
+    // Return regular user info
+    return {
+      id: user.id,
+      name: user.name,
+      type: user.role === 'studio' ? 'studio' : 'user',
+      profileImage: user.profileImage,
+      location: user.location,
+      slug: user.slug
+    };
+  }
+
+  // Return unknown if not found
+  return {
+    id: userId,
+    name: 'Unknown User',
+    type: 'user',
+    profileImage: '',
+    location: '',
+    slug: ''
+  };
 }
 
 // Read studios from file
@@ -84,42 +140,7 @@ export async function GET(
       // Support both followedId and followingId property names
       const targetId = follow.followingId || follow.followedId;
       
-      // First check if it's a user
-      const user = users.find((u: any) => u.id === targetId);
-      if (user) {
-        return {
-          id: user.id,
-          name: user.name,
-          type: 'user',
-          profileImage: user.profileImage,
-          location: user.location,
-          slug: user.slug
-        };
-      }
-
-      // Then check if it's a studio
-      const studio = studios.find((s: any) => s.id === targetId);
-      if (studio) {
-        return {
-          id: studio.id,
-          name: studio.name,
-          type: 'studio',
-          profileImage: studio.profileImage,
-          location: studio.location,
-          rating: studio.rating,
-          slug: studio.slug
-        };
-      }
-
-      // Return unknown if not found
-      return {
-        id: targetId,
-        name: 'Unknown User',
-        type: 'user',
-        profileImage: '',
-        location: '',
-        slug: ''
-      };
+      return getUserInfoWithStudio(targetId, users, studios);
     });
 
     return NextResponse.json({ following });

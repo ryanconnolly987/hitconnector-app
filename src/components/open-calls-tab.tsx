@@ -29,6 +29,7 @@ interface OpenCall {
   posterName: string
   posterImage?: string
   timestamp: string
+  dateNeeded?: string
   applicants?: Applicant[]
   studio?: {
     slug: string
@@ -92,7 +93,8 @@ export default function OpenCallsTab({ userType, userId, studioId }: OpenCallsTa
     genre: '',
     location: '',
     budget: '',
-    deadline: ''
+    deadline: '',
+    dateNeeded: ''
   })
 
   useEffect(() => {
@@ -169,10 +171,10 @@ export default function OpenCallsTab({ userType, userId, studioId }: OpenCallsTa
   }
 
   const handleCreateOpenCall = async () => {
-    if (!createForm.role || !createForm.description || !createForm.genre) {
+    if (!createForm.role || !createForm.description || !createForm.genre || !createForm.dateNeeded) {
       toast({
         title: "Missing Information",
-        description: "Please fill in role, description, and genre fields.",
+        description: "Please fill in role, description, genre, and date needed fields.",
         variant: "destructive"
       })
       return
@@ -190,7 +192,8 @@ export default function OpenCallsTab({ userType, userId, studioId }: OpenCallsTa
           role: createForm.role,
           genre: createForm.genre,
           description: createForm.description,
-          userType
+          userType,
+          dateNeeded: createForm.dateNeeded
         })
       })
 
@@ -198,7 +201,7 @@ export default function OpenCallsTab({ userType, userId, studioId }: OpenCallsTa
         const newCall = await response.json()
         setOpenCalls([newCall, ...openCalls])
         setShowCreateDialog(false)
-        setCreateForm({ role: '', description: '', genre: '', location: '', budget: '', deadline: '' })
+        setCreateForm({ role: '', description: '', genre: '', location: '', budget: '', deadline: '', dateNeeded: '' })
         toast({
           title: "Open Call Posted",
           description: "Your open call has been posted successfully."
@@ -367,6 +370,16 @@ export default function OpenCallsTab({ userType, userId, studioId }: OpenCallsTa
                           rows={4}
                         />
                       </div>
+                      <div>
+                        <Label htmlFor="dateNeeded">Date Needed By</Label>
+                        <Input
+                          id="dateNeeded"
+                          type="date"
+                          value={createForm.dateNeeded}
+                          onChange={(e) => setCreateForm({...createForm, dateNeeded: e.target.value})}
+                          required
+                        />
+                      </div>
                     </div>
                     <DialogFooter>
                       <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
@@ -383,9 +396,9 @@ export default function OpenCallsTab({ userType, userId, studioId }: OpenCallsTa
           </div>
 
           {/* Open Calls Grid */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="flex flex-col gap-4">
             {loading ? (
-              <div className="col-span-full flex items-center justify-center py-8">
+              <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
             ) : filteredCalls.length > 0 ? (
@@ -427,9 +440,17 @@ export default function OpenCallsTab({ userType, userId, studioId }: OpenCallsTa
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <p className="text-sm line-clamp-3">{call.description}</p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      <span>{new Date(call.timestamp).toLocaleDateString()}</span>
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-3 w-3" />
+                        <span>{new Date(call.timestamp).toLocaleDateString()}</span>
+                      </div>
+                      {call.dateNeeded && (
+                        <div className="flex items-center gap-2">
+                          <CalendarDays className="h-3 w-3" />
+                          <span>Needed by {new Date(call.dateNeeded).toLocaleDateString()}</span>
+                        </div>
+                      )}
                     </div>
                     {call.createdBy !== user?.id && (
                       <Button 
@@ -444,7 +465,7 @@ export default function OpenCallsTab({ userType, userId, studioId }: OpenCallsTa
                 </Card>
               ))
             ) : (
-              <div className="col-span-full text-center py-8">
+              <div className="text-center py-8">
                 <h3 className="text-lg font-medium">No open calls found</h3>
                 <p className="text-muted-foreground">Try adjusting your filters or check back later</p>
               </div>

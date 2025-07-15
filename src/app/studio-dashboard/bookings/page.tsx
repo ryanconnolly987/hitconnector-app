@@ -381,7 +381,22 @@ export default function BookingsPage() {
                         </Avatar>
                         <div className="space-y-2">
                           <div>
-                            <h3 className="font-semibold">{booking.userName}</h3>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold">{booking.userName}</h3>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                asChild
+                              >
+                                <Link 
+                                  href={`/artist/${booking.userId}`}
+                                  title={`View ${booking.userName}'s profile`}
+                                >
+                                  <User className="h-3 w-3" />
+                                </Link>
+                              </Button>
+                            </div>
                             <p className="text-sm text-muted-foreground">{booking.userEmail}</p>
                           </div>
                           <div className="flex items-center gap-4 text-sm">
@@ -534,7 +549,22 @@ export default function BookingsPage() {
                           <AvatarFallback>{booking.userName.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div>
-                          <h3 className="font-semibold">{booking.userName}</h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold">{booking.userName}</h3>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              asChild
+                            >
+                              <Link 
+                                href={`/artist/${booking.userId}`}
+                                title={`View ${booking.userName}'s profile`}
+                              >
+                                <User className="h-3 w-3" />
+                              </Link>
+                            </Button>
+                          </div>
                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
                             <div className="flex items-center gap-1">
                               <Calendar className="h-4 w-4" />
@@ -690,7 +720,22 @@ export default function BookingsPage() {
                           <AvatarFallback>{booking.userName.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div>
-                          <h3 className="font-semibold">{booking.userName}</h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold">{booking.userName}</h3>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              asChild
+                            >
+                              <Link 
+                                href={`/artist/${booking.userId}`}
+                                title={`View ${booking.userName}'s profile`}
+                              >
+                                <User className="h-3 w-3" />
+                              </Link>
+                            </Button>
+                          </div>
                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
                             <div className="flex items-center gap-1">
                               <Calendar className="h-4 w-4" />

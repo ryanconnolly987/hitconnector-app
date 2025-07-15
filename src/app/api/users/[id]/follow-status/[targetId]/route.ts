@@ -42,8 +42,10 @@ export async function GET(
     );
 
     // Calculate counts - support both property names for backward compatibility
+    // followersCount: how many people follow the target (targetId)
+    // followingCount: how many people the target (targetId) follows
     const followersCount = follows.filter((f: any) => f.followingId === targetId || f.followedId === targetId).length;
-    const followingCount = follows.filter((f: any) => f.followerId === id).length;
+    const followingCount = follows.filter((f: any) => f.followerId === targetId).length;
 
     return NextResponse.json({ 
       isFollowing,

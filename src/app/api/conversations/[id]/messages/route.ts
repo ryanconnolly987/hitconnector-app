@@ -34,6 +34,7 @@ interface User {
   email: string;
   name: string;
   role: string;
+  studioId?: string; // Added studioId for studio users
 }
 
 interface UserProfile {
@@ -43,7 +44,7 @@ interface UserProfile {
 }
 
 // Helper function to get user info with profile data
-function getUserInfo(userId: string): { id: string; name: string; email: string; role: string; profileImage?: string } | null {
+function getUserInfo(userId: string): { id: string; name: string; email: string; role: string; profileImage?: string; type?: string } | null {
   try {
     // Get basic user info
     let users: User[] = [];
@@ -64,12 +65,39 @@ function getUserInfo(userId: string): { id: string; name: string; email: string;
     
     const profile = profiles.find(p => p.id === userId);
     
+    // If user is a studio, get studio information
+    if (user.role === 'studio' && user.studioId) {
+      try {
+        const STUDIOS_FILE = path.join(process.cwd(), 'data', 'studios.json');
+        if (fs.existsSync(STUDIOS_FILE)) {
+          const studiosData = fs.readFileSync(STUDIOS_FILE, 'utf8');
+          const studioDataObj = JSON.parse(studiosData);
+          const studios = studioDataObj.studios || [];
+          
+          const studio = studios.find((s: any) => s.id === user.studioId);
+          if (studio) {
+            return {
+              id: user.id,
+              name: studio.name || user.name,
+              email: user.email,
+              role: user.role,
+              profileImage: studio.profileImage || profile?.profileImage,
+              type: 'studio'
+            };
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching studio info for user:', userId, error);
+      }
+    }
+    
     return {
       id: user.id,
       name: user.name,
       email: user.email,
       role: user.role,
-      profileImage: profile?.profileImage
+      profileImage: profile?.profileImage,
+      type: user.role === 'studio' ? 'studio' : 'artist'
     };
   } catch (error) {
     console.error('Error getting user info:', error);

@@ -7,6 +7,12 @@ export async function GET(request: NextRequest) {
   try {
     const users = getUsers();
     
+    // Ensure users is an array
+    if (!Array.isArray(users)) {
+      console.error('Users data is not an array:', users);
+      return NextResponse.json([]);
+    }
+    
     // Add slugs to users that don't have them
     let needsSave = false;
     const usersWithSlugs = users.map(user => {
@@ -29,7 +35,12 @@ export async function GET(request: NextRequest) {
     
     // Save back if we added slugs
     if (needsSave) {
-      saveUsers(usersWithSlugs);
+      try {
+        saveUsers(usersWithSlugs);
+      } catch (saveError) {
+        console.error('Error saving users with slugs:', saveError);
+        // Continue with the response even if saving fails
+      }
     }
     
     return NextResponse.json(usersWithSlugs);

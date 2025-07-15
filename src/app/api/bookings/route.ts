@@ -54,7 +54,11 @@ export async function GET(request: NextRequest) {
       filteredBookings = filteredBookings.filter(booking => booking.studioId === studioId);
     }
     if (userId) {
-      filteredBookings = filteredBookings.filter(booking => booking.userId === userId);
+      // For artists, only show confirmed bookings (not pending, cancelled, or rejected)
+      filteredBookings = filteredBookings.filter(booking => 
+        booking.userId === userId && 
+        (booking.status === 'confirmed' || booking.status === 'completed')
+      );
     }
     
     return NextResponse.json({ bookings: filteredBookings }, { status: 200 });

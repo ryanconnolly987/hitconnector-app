@@ -79,6 +79,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id: userId } = await params;
     
+    // Validate userId
+    if (!userId || userId === 'undefined' || userId === 'null') {
+      return NextResponse.json({ error: 'Invalid user ID provided' }, { status: 400 });
+    }
+    
     // Get basic user info
     const users = getUsers();
     const user = users.find(u => u.id === userId);

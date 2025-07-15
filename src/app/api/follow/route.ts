@@ -98,8 +98,10 @@ export async function POST(request: NextRequest) {
     saveFollows(follows);
 
     // Calculate updated follower counts
+    // followersCount: how many people follow the target (followingId)
+    // followingCount: how many people the target (followingId) follows
     const followersCount = follows.filter(f => f.followingId === followingId).length;
-    const followingCount = follows.filter(f => f.followerId === followerId).length;
+    const followingCount = follows.filter(f => f.followerId === followingId).length;
 
     return NextResponse.json({ 
       success: true,
