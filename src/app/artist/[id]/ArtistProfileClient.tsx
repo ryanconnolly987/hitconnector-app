@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { FollowButton, FollowStats } from "@/components/ui/follow-button"
-import { Star, MapPin, Calendar, Music, Globe, Instagram, Twitter, ExternalLink, User, Headphones } from "lucide-react"
+import { Star, MapPin, Calendar, Music, Globe, Instagram, Twitter, ExternalLink, User, Headphones, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { MusicPlayer } from "@/components/ui/music-player"
 import { MessageButton } from "@/components/ui/message-button"
@@ -16,10 +16,12 @@ import type { Artist } from "@/lib/types"
 
 export default function ArtistProfileClient({ 
   profile, 
-  isOwner 
+  isOwner,
+  backHref
 }: { 
   profile: Artist
-  isOwner: boolean 
+  isOwner: boolean
+  backHref?: string
 }) {
   const { user } = useAuth()
   const { toast } = useToast()
@@ -136,6 +138,17 @@ export default function ArtistProfileClient({
           <div className="w-full h-full bg-gradient-to-r from-blue-500 to-purple-600" />
         )}
         <div className="absolute inset-0 bg-black/20" />
+        
+        {/* Back Button */}
+        {backHref && (
+          <Link
+            href={backHref}
+            className="absolute top-4 left-4 flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 text-sm font-medium shadow hover:bg-white z-10"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Link>
+        )}
       </div>
 
       {/* Profile Header */}
