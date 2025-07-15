@@ -63,6 +63,8 @@ export default function StudioDashboardPage() {
   const [revenue, setRevenue] = useState<number>(0)
   const [studioData, setStudioData] = useState({
     name: "Loading...",
+    firstName: "",
+    lastName: "",
     avatar: "/placeholder.svg?height=40&width=40",
     email: "",
     rating: 0, // Changed from 4.8 to 0 as default
@@ -175,6 +177,8 @@ export default function StudioDashboardPage() {
           
           setStudioData({
             name: studio.name || "Studio",
+            firstName: studio.firstName || user.name?.split(' ')[0] || "",
+            lastName: studio.lastName || user.name?.split(' ').slice(1).join(' ') || "",
             avatar: studio.profileImage || "/placeholder.svg?height=40&width=40",
             email: studio.email || user.email || "",
             rating: actualRating,
@@ -244,6 +248,8 @@ export default function StudioDashboardPage() {
           // No studio found, set defaults
           setStudioData({
             name: user.name || "Studio",
+            firstName: user.name?.split(' ')[0] || "",
+            lastName: user.name?.split(' ').slice(1).join(' ') || "",
             avatar: "/placeholder.svg?height=40&width=40",
             email: user.email || "",
             rating: 0,
@@ -257,6 +263,8 @@ export default function StudioDashboardPage() {
         console.error('❌ [Dashboard] Error fetching data:', error)
         setStudioData({
           name: user.name || "Studio",
+          firstName: user.name?.split(' ')[0] || "",
+          lastName: user.name?.split(' ').slice(1).join(' ') || "",
           avatar: "/placeholder.svg?height=40&width=40",
           email: user.email || "",
           rating: 0,
@@ -390,7 +398,7 @@ export default function StudioDashboardPage() {
               <div>
                 <h1 className="text-2xl font-bold tracking-tight">Manage Your Studio</h1>
                 <p className="text-muted-foreground">
-                  Welcome back to {studioData.name}. Manage your bookings and studio profile.
+                  Welcome back{studioData.firstName ? ` ${studioData.firstName}` : ` to ${studioData.name}`}. Manage your bookings and studio profile.
                 </p>
               </div>
               <div className="flex items-center gap-4">

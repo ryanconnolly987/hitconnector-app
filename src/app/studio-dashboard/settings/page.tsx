@@ -284,6 +284,8 @@ export default function SettingsPage() {
       // Prepare data for API
       const studioApiData = {
         name: accountData.studioName,
+        firstName: accountData.firstName,
+        lastName: accountData.lastName,
         email: accountData.email,
         phone: accountData.phone,
         description: accountData.bio,
@@ -309,6 +311,14 @@ export default function SettingsPage() {
       if (response.ok) {
         const savedStudio = await response.json()
         console.log('✅ [Settings] Account data saved successfully:', savedStudio.id)
+        
+        // Invalidate cache by clearing studio data in localStorage  
+        const userKey = user?.email || user?.id
+        if (userKey) {
+          localStorage.removeItem(`studioProfileData_${userKey}`)
+          // Force refresh on next dashboard visit by adding timestamp
+          localStorage.setItem('studio_data_updated', Date.now().toString())
+        }
         
         toast({
           title: "Settings Saved!",
