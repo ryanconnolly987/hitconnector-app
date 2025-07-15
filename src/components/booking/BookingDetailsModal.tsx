@@ -42,6 +42,9 @@ interface BookingDetails {
   approvedAt?: string
   artistSlug?: string
   artistId?: string
+  engineer?: {
+    displayName: string
+  }
 }
 
 export function BookingDetailsModal() {
@@ -178,6 +181,12 @@ export function BookingDetailsModal() {
                 <Label>Duration</Label>
                 <p>{booking.duration} hours</p>
               </div>
+              {booking.engineer && (
+                <div>
+                  <Label>Engineer Preference</Label>
+                  <p>{booking.engineer.displayName}</p>
+                </div>
+              )}
               <div>
                 <Label>Total Cost</Label>
                 <p className="font-medium">${booking.totalCost}</p>
