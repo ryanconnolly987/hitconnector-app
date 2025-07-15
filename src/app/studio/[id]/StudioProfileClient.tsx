@@ -27,6 +27,8 @@ interface Studio {
   profileImage?: string
   coverImage?: string
   hourlyRate: number
+  minRoomRate?: number | null
+  maxRoomRate?: number | null
   specialties: string[]
   rating: number
   reviewCount: number
@@ -223,10 +225,10 @@ export default function StudioProfileClient({
                   <div className="flex items-center gap-4 mb-2">
                     <FollowStats targetId={String(studio.id)} />
                   </div>
-                  {studio.hourlyRate > 0 && (
+                  {studio.minRoomRate && studio.maxRoomRate && (
                     <div className="flex items-center gap-1">
                       <DollarSign className="h-4 w-4" />
-                      <span className="font-medium">${studio.hourlyRate}/hour</span>
+                      <span className="font-medium">${studio.minRoomRate} – ${studio.maxRoomRate}/hr</span>
                     </div>
                   )}
                 </div>
@@ -346,11 +348,15 @@ export default function StudioProfileClient({
                     <CardTitle>Quick Info</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Hourly Rate</span>
-                      <span className="font-medium">${studio.hourlyRate}/hour</span>
-                    </div>
-                    <Separator />
+                    {studio.minRoomRate && studio.maxRoomRate && (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Price Range</span>
+                          <span className="font-medium">${studio.minRoomRate} – ${studio.maxRoomRate}/hr</span>
+                        </div>
+                        <Separator />
+                      </>
+                    )}
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Followers</span>
                       <span className="font-medium">{studio.followersCount || 0}</span>

@@ -57,8 +57,24 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         { status: 404 }
       );
     }
+
+    // Compute minRoomRate and maxRoomRate from rooms
+    const rooms = studio.rooms || [];
+    const roomRates = rooms
+      .filter((room: any) => room && typeof room.hourlyRate === 'number' && room.hourlyRate > 0)
+      .map((room: any) => room.hourlyRate);
     
-    return NextResponse.json(studio);
+    const minRoomRate = roomRates.length > 0 ? Math.min(...roomRates) : null;
+    const maxRoomRate = roomRates.length > 0 ? Math.max(...roomRates) : null;
+
+    // Add computed rates to studio object
+    const enhancedStudio = {
+      ...studio,
+      minRoomRate,
+      maxRoomRate
+    };
+    
+    return NextResponse.json(enhancedStudio);
   } catch (error) {
     console.error('Error fetching studio:', error);
     return NextResponse.json(

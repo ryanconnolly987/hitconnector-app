@@ -31,6 +31,8 @@ interface Studio {
   profileImage?: string
   coverImage?: string
   hourlyRate: number
+  minRoomRate?: number | null
+  maxRoomRate?: number | null
   specialties: string[]
   rating: number
   reviewCount: number

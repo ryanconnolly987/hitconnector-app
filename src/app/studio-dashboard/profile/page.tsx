@@ -1090,24 +1090,13 @@ function StudioProfileContent() {
                 <CardDescription>Update your studio's basic details</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Studio Name</Label>
-                    <Input
-                      id="name"
-                      value={studioData.name}
-                      onChange={(e) => setStudioData(prev => ({ ...prev, name: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="hourlyRate">Hourly Rate ($)</Label>
-                    <Input
-                      id="hourlyRate"
-                      type="number"
-                      value={studioData.hourlyRate}
-                      onChange={(e) => setStudioData(prev => ({ ...prev, hourlyRate: parseInt(e.target.value) || 0 }))}
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Studio Name</Label>
+                  <Input
+                    id="name"
+                    value={studioData.name}
+                    onChange={(e) => setStudioData(prev => ({ ...prev, name: e.target.value }))}
+                  />
                 </div>
 
                 <div className="space-y-2">
