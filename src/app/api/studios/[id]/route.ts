@@ -103,10 +103,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       );
     }
     
-    // Update studio data
+    // Update studio data, including firstName and lastName if provided
     studios[studioIndex] = {
       ...studios[studioIndex],
       ...body,
+      firstName: body.firstName ?? studios[studioIndex].firstName ?? undefined,
+      lastName: body.lastName ?? studios[studioIndex].lastName ?? undefined,
       id: studios[studioIndex].id, // Preserve the original ID
       slug: studios[studioIndex].slug, // Preserve the original slug
       updatedAt: new Date().toISOString()

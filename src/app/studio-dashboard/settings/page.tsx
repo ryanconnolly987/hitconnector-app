@@ -304,6 +304,8 @@ export default function SettingsPage() {
         phone: accountData.phone,
         description: accountData.bio,
         profileImage: accountData.profileImage,
+        firstName: accountData.firstName ?? undefined,
+        lastName: accountData.lastName ?? undefined,
         owner: user?.email || user?.id
       }
 

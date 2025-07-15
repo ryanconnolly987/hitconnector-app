@@ -66,7 +66,9 @@ export default function StudioDashboardPage() {
     email: "",
     rating: 0, // Changed from 4.8 to 0 as default
     reviewCount: 0,
-    profileImage: ""
+    profileImage: "",
+    firstName: undefined as string | undefined,
+    lastName: undefined as string | undefined
   })
   
   const { user } = useAuth()
@@ -175,7 +177,9 @@ export default function StudioDashboardPage() {
             email: studio.email || user.email || "",
             rating: actualRating, // Use calculated rating instead of hardcoded 4.8
             reviewCount: actualReviewCount, // Use actual review count
-            profileImage: studio.profileImage || ""
+            profileImage: studio.profileImage || "",
+            firstName: studio.firstName,
+            lastName: studio.lastName
           })
           
           console.log('✅ [Dashboard] Studio data loaded:', {
@@ -229,7 +233,9 @@ export default function StudioDashboardPage() {
             email: user.email || "",
             rating: 0,
             reviewCount: 0,
-            profileImage: ""
+            profileImage: "",
+            firstName: undefined,
+            lastName: undefined
           })
           setBookingRequests([])
           setBookings([])
@@ -242,7 +248,9 @@ export default function StudioDashboardPage() {
           email: user.email || "",
           rating: 0,
           reviewCount: 0,
-          profileImage: ""
+          profileImage: "",
+          firstName: undefined,
+          lastName: undefined
         })
         setBookingRequests([])
         setBookings([])
@@ -371,7 +379,7 @@ export default function StudioDashboardPage() {
               <div>
                 <h1 className="text-2xl font-bold tracking-tight">Manage Your Studio</h1>
                 <p className="text-muted-foreground">
-                  Welcome back to {studioData.name}. Manage your bookings and studio profile.
+                  Welcome back {studioData.firstName ? studioData.firstName : studioData.name}. Manage your bookings and studio profile.
                 </p>
               </div>
               <div className="flex items-center gap-4">
@@ -743,7 +751,7 @@ export default function StudioDashboardPage() {
   )
 }
 
-function StudioDashboardSidebar({ studio }: { studio: { name: string; avatar: string; email: string; profileImage?: string } }) {
+function StudioDashboardSidebar({ studio }: { studio: { name: string; avatar: string; email: string; profileImage?: string; firstName?: string; lastName?: string } }) {
   return (
     <Sidebar>
       <SidebarHeader>
