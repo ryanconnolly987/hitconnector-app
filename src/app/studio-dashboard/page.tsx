@@ -27,6 +27,9 @@ import { useFollow } from "@/hooks/use-follow"
 import { API_BASE_URL } from "@/lib/config"
 import OpenCallsTab from "@/components/open-calls-tab"
 import { buildArtistProfileHrefFromParams } from "@/lib/url-utils"
+import { BookingDetailsProvider } from "@/components/booking/BookingDetailsProvider"
+import { BookingDetailsModal } from "@/components/booking/BookingDetailsModal"
+import { UpcomingBookingCard } from "@/components/booking/UpcomingBookingCard"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -370,8 +373,9 @@ export default function StudioDashboardPage() {
   }
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen bg-muted/40">
+    <BookingDetailsProvider>
+      <SidebarProvider>
+        <div className="flex min-h-screen bg-muted/40">
         <StudioDashboardSidebar studio={studioData} />
         <SidebarInset>
           <div className="flex-1 space-y-6 p-6 md:p-8">
@@ -706,57 +710,23 @@ export default function StudioDashboardPage() {
               <TabsContent value="upcoming">
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {bookings.filter(booking => booking && booking.id).map((booking, index) => (
-                    <Card key={booking.id || `booking-${index}`}>
-                      <CardHeader className="flex flex-row items-center gap-4 pb-2">
-                        {buildArtistProfileHrefFromParams(booking.artistSlug || booking.userSlug, booking.artistId || booking.userId) ? (
-                          <Link
-                            href={buildArtistProfileHrefFromParams(booking.artistSlug || booking.userSlug, booking.artistId || booking.userId)!}
-                            className="inline-flex items-center gap-2 group"
-                          >
-                            <Avatar>
-                              <AvatarImage src={booking.artistProfilePicture || "/placeholder.svg"} alt={booking.artistName || booking.userName} />
-                              <AvatarFallback>{(booking.artistName || booking.userName)?.charAt(0) || 'U'}</AvatarFallback>
-                            </Avatar>
-                            <span className="group-hover:underline font-semibold">{booking.artistName || booking.userName}</span>
-                          </Link>
-                        ) : (
-                          <div className="inline-flex items-center gap-2">
-                            <Avatar>
-                              <AvatarImage src={booking.artistProfilePicture || "/placeholder.svg"} alt={booking.artistName || booking.userName} />
-                              <AvatarFallback>{(booking.artistName || booking.userName)?.charAt(0) || 'U'}</AvatarFallback>
-                            </Avatar>
-                            <span className="font-semibold">{booking.artistName || booking.userName}</span>
-                          </div>
-                        )}
-                        <div className="flex-1">
-                          <Badge variant={booking.status === "confirmed" ? "default" : "outline"}>
-                            {booking.status === "confirmed" ? "Confirmed" : "Pending"}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pb-2">
-                        <div className="grid gap-2">
-                          <div className="flex items-center gap-2 text-sm">
-                            <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                            <span>{booking.date ? format(new Date(booking.date), "MMM dd, yyyy") : "Date not available"}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <span>
-                              {booking.startTime} - {booking.endTime}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <span className="font-medium">{booking.roomName}</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                      <CardFooter>
-                        <Button variant="outline" className="w-full" asChild>
-                          <Link href={`/studio-dashboard/bookings/${booking.id}`}>View Details</Link>
-                        </Button>
-                      </CardFooter>
-                    </Card>
+                    <UpcomingBookingCard
+                      key={booking.id || `booking-${index}`}
+                      booking={{
+                        id: booking.id,
+                        date: booking.date,
+                        startTime: booking.startTime,
+                        endTime: booking.endTime,
+                        roomName: booking.roomName,
+                        status: booking.status,
+                        artistId: booking.artistId,
+                        artistName: booking.artistName,
+                        artistSlug: booking.artistSlug,
+                        artistProfilePicture: booking.artistProfilePicture,
+                        userName: booking.userName,
+                        userId: booking.userId
+                      }}
+                    />
                   ))}
                 </div>
               </TabsContent>
@@ -780,6 +750,8 @@ export default function StudioDashboardPage() {
         </SidebarInset>
       </div>
     </SidebarProvider>
+    <BookingDetailsModal />
+    </BookingDetailsProvider>
   )
 }
 
