@@ -80,7 +80,6 @@ export default function BookingsPage() {
   const [confirmedBookings, setConfirmedBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
   const [cancelLoading, setCancelLoading] = useState(false)
-  const [revenue, setRevenue] = useState<number>(0)
   const { user } = useAuth()
   const { toast } = useToast()
 
@@ -89,15 +88,37 @@ export default function BookingsPage() {
     try {
       console.time('fetchBookings');
       
-      // Fetch booking requests
-      const requestsResponse = await fetch(`${API_BASE_URL}/api/booking-requests`)
-      if (!requestsResponse.ok) {
-        throw new Error('Failed to fetch booking requests')
+      // Get current studio ID first
+      const studiosResponse = await fetch(`${API_BASE_URL}/api/studios`)
+      if (!studiosResponse.ok) {
+        throw new Error('Failed to fetch studios')
       }
-      const requestsData = await requestsResponse.json()
-      console.log('📥 [Bookings] Raw booking requests data:', requestsData)
       
-      const validBookingRequests = (requestsData.bookingRequests || []).filter((request: any) => {
+      const studiosData = await studiosResponse.json()
+      const userStudios = studiosData.studios?.filter((studio: any) => 
+        studio.owner === user?.email || studio.owner === user?.id
+      ) || []
+      
+      if (userStudios.length === 0) {
+        console.warn('⚠️ [Bookings] No studio found for user')
+        setBookingRequests([])
+        setConfirmedBookings([])
+        return
+      }
+      
+      const studioId = userStudios[0].id
+      
+      // Fetch unified booking data
+      const response = await fetch(`${API_BASE_URL}/api/bookings?studioId=${studioId}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch booking data')
+      }
+      
+      const data = await response.json()
+      console.log('📥 [Bookings] Unified booking data:', data)
+      
+      // Normalize data from unified API response
+      const validPendingRequests = (data.pending || []).filter((request: any) => {
         if (!request.id) {
           console.warn('⚠️ [Bookings] Found booking request without ID:', request)
           return false
@@ -105,44 +126,20 @@ export default function BookingsPage() {
         return true
       })
       
-      setBookingRequests(validBookingRequests)
+      const validConfirmedBookings = [
+        ...(data.upcoming || []),
+        ...(data.past || [])
+      ].filter((booking: any) => {
+        if (!booking.id) {
+          console.warn('⚠️ [Bookings] Found booking without ID:', booking)
+          return false
+        }
+        return true
+      })
       
-      // Fetch unified bookings data (returns partitioned structure)
-      const bookingsResponse = await fetch(`${API_BASE_URL}/api/bookings`)
-      if (bookingsResponse.ok) {
-        const bookingsData = await bookingsResponse.json()
-        console.log('📥 [Bookings] Unified bookings data:', bookingsData)
-        
-        // Set revenue if available
-        if (bookingsData.revenue !== undefined) {
-          setRevenue(bookingsData.revenue)
-          console.log(`💰 [Bookings] Monthly revenue: $${bookingsData.revenue}`)
-        }
-        
-        // Handle both old format (for user bookings) and new format (for studio bookings)
-        let allBookings = []
-        if (bookingsData.pending || bookingsData.upcoming || bookingsData.past) {
-          // New partitioned format - combine all bookings
-          allBookings = [
-            ...(bookingsData.pending || []),
-            ...(bookingsData.upcoming || []),
-            ...(bookingsData.past || [])
-          ]
-        } else {
-          // Old format - direct bookings array
-          allBookings = bookingsData.bookings || []
-        }
-        
-        const validBookings = allBookings.filter((booking: any) => {
-          if (!booking.id) {
-            console.warn('⚠️ [Bookings] Found booking without ID:', booking)
-            return false
-          }
-          return true
-        })
-        
-        setConfirmedBookings(validBookings)
-      }
+      setBookingRequests(validPendingRequests)
+      setConfirmedBookings(validConfirmedBookings)
+      
       console.timeEnd('fetchBookings');
     } catch (error) {
       console.error('❌ [Bookings] Error fetching booking requests:', error)
@@ -387,8 +384,8 @@ export default function BookingsPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">This Month Revenue</p>
-                  <p className="text-2xl font-bold">${revenue.toFixed(2)}</p>
+                  <p className="text-sm font-medium text-muted-foreground">Revenue</p>
+                  <p className="text-2xl font-bold">${confirmedBookings.reduce((sum, b) => sum + b.totalCost, 0)}</p>
                 </div>
                 <DollarSign className="h-8 w-8 text-purple-600" />
               </div>

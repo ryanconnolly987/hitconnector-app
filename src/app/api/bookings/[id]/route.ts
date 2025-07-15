@@ -131,13 +131,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       artistId: booking.userId,
       artistName: artistInfo?.name || booking.userName,
       artistSlug: artistInfo?.slug,
-      artistProfilePicture: artistInfo?.profileImage,
-      // Include engineer preference if available
-      ...(booking.staffName && {
-        engineer: {
-          displayName: booking.staffName
-        }
-      })
+      artistProfilePicture: artistInfo?.profileImage
     };
 
     return NextResponse.json(enhancedBooking);

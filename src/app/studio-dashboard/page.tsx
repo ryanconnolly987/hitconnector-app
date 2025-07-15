@@ -60,11 +60,8 @@ export default function StudioDashboardPage() {
   const [bookings, setBookings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [studioId, setStudioId] = useState<string>("")
-  const [revenue, setRevenue] = useState<number>(0)
   const [studioData, setStudioData] = useState({
     name: "Loading...",
-    firstName: "",
-    lastName: "",
     avatar: "/placeholder.svg?height=40&width=40",
     email: "",
     rating: 0, // Changed from 4.8 to 0 as default
@@ -154,11 +151,8 @@ export default function StudioDashboardPage() {
           const studio = userStudios[0] // Get the first studio
           console.log('🎯 [Dashboard] Using studio:', { id: studio.id, name: studio.name })
           
-          // Fetch unified booking data and booking requests
-          const [bookingRequestsResponse, unifiedBookingsResponse] = await Promise.all([
-            fetch(`${API_BASE_URL}/api/booking-requests?studioId=${studio.id}`),
-            fetch(`${API_BASE_URL}/api/bookings?studioId=${studio.id}`)
-          ])
+          // Fetch unified booking data using new API
+          const bookingsResponse = await fetch(`${API_BASE_URL}/api/bookings?studioId=${studio.id}`)
           
           // Set studio ID for follow tracking
           const currentStudioId = studio.id || user.studioId
@@ -177,12 +171,10 @@ export default function StudioDashboardPage() {
           
           setStudioData({
             name: studio.name || "Studio",
-            firstName: studio.firstName || user.name?.split(' ')[0] || "",
-            lastName: studio.lastName || user.name?.split(' ').slice(1).join(' ') || "",
             avatar: studio.profileImage || "/placeholder.svg?height=40&width=40",
             email: studio.email || user.email || "",
-            rating: actualRating,
-            reviewCount: actualReviewCount,
+            rating: actualRating, // Use calculated rating instead of hardcoded 4.8
+            reviewCount: actualReviewCount, // Use actual review count
             profileImage: studio.profileImage || ""
           })
           
@@ -191,45 +183,21 @@ export default function StudioDashboardPage() {
             hasProfileImage: !!studio.profileImage
           })
           
-          // Process booking requests (still from the separate endpoint for pending requests)
-          if (bookingRequestsResponse.ok) {
-            const requestsData = await bookingRequestsResponse.json()
-            console.log(`✅ [Dashboard] Found ${requestsData.bookingRequests?.length || 0} booking requests`)
+          // Process unified booking data
+          if (bookingsResponse.ok) {
+            const bookingsData = await bookingsResponse.json()
+            console.log(`✅ [Dashboard] Found unified bookings data:`, bookingsData)
             
-            // Only show pending booking requests
-            const validRequests = (requestsData.bookingRequests || []).filter((request: any) => {
+            // Normalize data from unified API response
+            const pendingRequests = (bookingsData.pending || []).filter((request: any) => {
               if (!request.id) {
                 console.warn('⚠️ [Dashboard] Found booking request without ID:', request)
-                return false
-              }
-              if (request.status && request.status !== 'pending') {
-                console.log(`🔍 [Dashboard] Filtering out non-pending request (${request.status}):`, request.id)
                 return false
               }
               return true
             })
             
-            console.log(`🔍 [Dashboard] Valid pending booking requests: ${validRequests.length}/${requestsData.bookingRequests?.length || 0}`)
-            setBookingRequests(validRequests)
-          } else {
-            console.log(`❌ [Dashboard] Failed to fetch booking requests`)
-            setBookingRequests([])
-          }
-
-          // Process unified booking data (now returns partitioned structure)
-          if (unifiedBookingsResponse.ok) {
-            const bookingsData = await unifiedBookingsResponse.json()
-            console.log(`✅ [Dashboard] Received unified booking data:`, bookingsData)
-            
-            // Extract upcoming bookings from the partitioned response
-            const upcomingBookings = bookingsData.upcoming || []
-            
-            // Set revenue data
-            setRevenue(bookingsData.revenue || 0)
-            console.log(`💰 [Dashboard] Monthly revenue: $${bookingsData.revenue || 0}`)
-            
-            // Validate bookings
-            const validBookings = upcomingBookings.filter((booking: any) => {
+            const upcomingBookings = (bookingsData.upcoming || []).filter((booking: any) => {
               if (!booking.id) {
                 console.warn('⚠️ [Dashboard] Found booking without ID:', booking)
                 return false
@@ -237,19 +205,26 @@ export default function StudioDashboardPage() {
               return true
             })
             
-            console.log(`🔍 [Dashboard] Valid upcoming bookings: ${validBookings.length}`)
-            setBookings(validBookings)
+            const pastBookings = (bookingsData.past || []).filter((booking: any) => {
+              if (!booking.id) {
+                console.warn('⚠️ [Dashboard] Found booking without ID:', booking)
+                return false
+              }
+              return true
+            })
+            
+            console.log(`🔍 [Dashboard] Processed: ${pendingRequests.length} pending, ${upcomingBookings.length} upcoming, ${pastBookings.length} past`)
+            setBookingRequests(pendingRequests)
+            setBookings([...upcomingBookings, ...pastBookings]) // Combine for existing calendar display
           } else {
-            console.log(`❌ [Dashboard] Failed to fetch unified bookings`)
+            console.log(`❌ [Dashboard] Failed to fetch booking data`)
+            setBookingRequests([])
             setBookings([])
-            setRevenue(0)
           }
         } else {
           // No studio found, set defaults
           setStudioData({
             name: user.name || "Studio",
-            firstName: user.name?.split(' ')[0] || "",
-            lastName: user.name?.split(' ').slice(1).join(' ') || "",
             avatar: "/placeholder.svg?height=40&width=40",
             email: user.email || "",
             rating: 0,
@@ -263,8 +238,6 @@ export default function StudioDashboardPage() {
         console.error('❌ [Dashboard] Error fetching data:', error)
         setStudioData({
           name: user.name || "Studio",
-          firstName: user.name?.split(' ')[0] || "",
-          lastName: user.name?.split(' ').slice(1).join(' ') || "",
           avatar: "/placeholder.svg?height=40&width=40",
           email: user.email || "",
           rating: 0,
@@ -398,7 +371,7 @@ export default function StudioDashboardPage() {
               <div>
                 <h1 className="text-2xl font-bold tracking-tight">Manage Your Studio</h1>
                 <p className="text-muted-foreground">
-                  Welcome back{studioData.firstName ? ` ${studioData.firstName}` : ` to ${studioData.name}`}. Manage your bookings and studio profile.
+                  Welcome back to {studioData.name}. Manage your bookings and studio profile.
                 </p>
               </div>
               <div className="flex items-center gap-4">
@@ -427,54 +400,6 @@ export default function StudioDashboardPage() {
                 </Button>
               </div>
             </header>
-
-            {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">This Month Revenue</p>
-                      <p className="text-2xl font-bold">${revenue.toFixed(2)}</p>
-                    </div>
-                    <DollarSign className="h-8 w-8 text-green-600" />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Pending Requests</p>
-                      <p className="text-2xl font-bold">{bookingRequests.length}</p>
-                    </div>
-                    <Clock className="h-8 w-8 text-yellow-600" />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Upcoming Bookings</p>
-                      <p className="text-2xl font-bold">{bookings.length}</p>
-                    </div>
-                    <CalendarDays className="h-8 w-8 text-blue-600" />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Followers</p>
-                      <p className="text-2xl font-bold">{followersCount}</p>
-                    </div>
-                    <Heart className="h-8 w-8 text-red-600" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
 
             <div className="grid gap-6 md:grid-cols-3">
               <Card className="md:col-span-2">

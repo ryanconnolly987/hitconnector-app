@@ -86,57 +86,35 @@ export default function StudioBookingsPage() {
           
           console.log(`📋 [Bookings] Fetching booking data for studio: ${currentStudioId}`)
           
-          // Fetch both booking requests and confirmed bookings
-          const [requestsResponse, bookingsResponse] = await Promise.all([
-            fetch(`${API_BASE_URL}/api/booking-requests?studioId=${currentStudioId}`),
-            fetch(`${API_BASE_URL}/api/bookings?studioId=${currentStudioId}`)
-          ])
+          // Fetch unified booking data using new API
+          const bookingsResponse = await fetch(`${API_BASE_URL}/api/bookings?studioId=${currentStudioId}`)
           
           const allBookingsData: Booking[] = []
           
-          // Process booking requests
-          if (requestsResponse.ok) {
-            const requestsData = await requestsResponse.json()
-            const validRequests = (requestsData.bookingRequests || []).filter((request: any) => request.id)
-            
-            // Convert booking requests to booking format
-            const formattedRequests = validRequests.map((request: any) => ({
-              id: request.id,
-              artistName: request.userName || request.userEmail || 'Unknown Artist',
-              artistImage: request.artistImage || "/placeholder.svg?height=40&width=40",
-              date: request.date,
-              startTime: request.startTime,
-              endTime: request.endTime,
-              room: request.room,
-              status: request.status || 'pending',
-              studioId: request.studioId,
-              userId: request.userId,
-              userName: request.userName,
-              userEmail: request.userEmail,
-              duration: request.duration,
-              totalCost: request.totalCost,
-              message: request.message,
-              createdAt: request.createdAt
-            }))
-            
-            allBookingsData.push(...formattedRequests)
-          }
-          
-          // Process confirmed bookings
+          // Process unified booking data
           if (bookingsResponse.ok) {
             const bookingsData = await bookingsResponse.json()
-            const validBookings = (bookingsData.bookings || []).filter((booking: any) => booking.id)
+            console.log(`✅ [Bookings] Found unified bookings data:`, bookingsData)
             
-            // Convert confirmed bookings to booking format
+            // Process all booking categories from unified API
+            const allCategories = [
+              ...(bookingsData.pending || []),
+              ...(bookingsData.upcoming || []),
+              ...(bookingsData.past || [])
+            ]
+            
+            const validBookings = allCategories.filter((booking: any) => booking.id)
+            
+            // Convert to booking format
             const formattedBookings = validBookings.map((booking: any) => ({
               id: booking.id,
-              artistName: booking.userName || booking.userEmail || 'Unknown Artist',
-              artistImage: booking.artistImage || "/placeholder.svg?height=40&width=40",
+              artistName: booking.artist?.displayName || booking.userName || booking.userEmail || 'Unknown Artist',
+              artistImage: booking.artist?.avatarUrl || booking.artistProfilePicture || "/placeholder.svg?height=40&width=40",
               date: booking.date,
               startTime: booking.startTime,
               endTime: booking.endTime,
-              room: booking.room,
-              status: 'confirmed',
+              room: booking.roomName || booking.room,
+              status: booking.status,
               studioId: booking.studioId,
               userId: booking.userId,
               userName: booking.userName,

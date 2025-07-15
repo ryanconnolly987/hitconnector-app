@@ -1,9 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-
-// Feature flag for subscription functionality
-const STUDIO_SUBSCRIPTION_ENABLED = process.env.NEXT_PUBLIC_STUDIO_SUBSCRIPTION_ENABLED === 'true' || false;
 import Link from "next/link"
 import { ArrowLeft, Bell, Shield, CreditCard, User, Mail, Phone, Lock, Eye, EyeOff, Upload, Camera } from "lucide-react"
 import { useAuth } from "@/lib/auth"
@@ -37,6 +34,7 @@ export default function SettingsPage() {
     phone: "",
     studioName: "",
     bio: "",
+    website: "",
     timezone: "America/Los_Angeles",
     language: "en",
     profileImage: ""
@@ -111,6 +109,7 @@ export default function SettingsPage() {
               phone: studio.phone || '',
               studioName: studio.name || '',
               bio: studio.description || '',
+              website: studio.website || '',
               timezone: "America/Los_Angeles", // Default, could be stored in studio data
               language: "en", // Default, could be stored in studio data
               profileImage: studio.profileImage || ''
@@ -284,10 +283,9 @@ export default function SettingsPage() {
       // Prepare data for API
       const studioApiData = {
         name: accountData.studioName,
-        firstName: accountData.firstName,
-        lastName: accountData.lastName,
         email: accountData.email,
         phone: accountData.phone,
+        website: accountData.website,
         description: accountData.bio,
         profileImage: accountData.profileImage,
         owner: user?.email || user?.id
@@ -311,14 +309,6 @@ export default function SettingsPage() {
       if (response.ok) {
         const savedStudio = await response.json()
         console.log('✅ [Settings] Account data saved successfully:', savedStudio.id)
-        
-        // Invalidate cache by clearing studio data in localStorage  
-        const userKey = user?.email || user?.id
-        if (userKey) {
-          localStorage.removeItem(`studioProfileData_${userKey}`)
-          // Force refresh on next dashboard visit by adding timestamp
-          localStorage.setItem('studio_data_updated', Date.now().toString())
-        }
         
         toast({
           title: "Settings Saved!",
@@ -547,7 +537,15 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-
+                <div className="space-y-2">
+                  <Label htmlFor="website">Website</Label>
+                  <Input
+                    id="website"
+                    value={accountData.website}
+                    onChange={(e) => setAccountData(prev => ({ ...prev, website: e.target.value }))}
+                    placeholder="Enter your website URL"
+                  />
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
@@ -834,42 +832,37 @@ export default function SettingsPage() {
                 <CardDescription>Manage your billing details and subscription</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Subscription section - disabled by default */}
-                {STUDIO_SUBSCRIPTION_ENABLED && (
-                  <>
-                    <div className="rounded-lg border p-4 bg-muted/20">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="font-medium">HitConnector Pro</h3>
-                          <p className="text-sm text-muted-foreground">Monthly subscription</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium">$29/month</p>
-                          <p className="text-sm text-muted-foreground">Next billing: Jan 15, 2024</p>
-                        </div>
-                      </div>
+                <div className="rounded-lg border p-4 bg-muted/20">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-medium">HitConnector Pro</h3>
+                      <p className="text-sm text-muted-foreground">Monthly subscription</p>
                     </div>
-
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <span>Subscription Status</span>
-                        <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                          Active
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span>Payment Method</span>
-                        <span className="text-sm text-muted-foreground">•••• •••• •••• 4242</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span>Next Payment</span>
-                        <span className="text-sm text-muted-foreground">January 15, 2024</span>
-                      </div>
+                    <div className="text-right">
+                      <p className="font-medium">$29/month</p>
+                      <p className="text-sm text-muted-foreground">Next billing: Jan 15, 2024</p>
                     </div>
+                  </div>
+                </div>
 
-                    <Separator />
-                  </>
-                )}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span>Subscription Status</span>
+                    <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                      Active
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Payment Method</span>
+                    <span className="text-sm text-muted-foreground">•••• •••• •••• 4242</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Next Payment</span>
+                    <span className="text-sm text-muted-foreground">January 15, 2024</span>
+                  </div>
+                </div>
+
+                <Separator />
 
                 <div className="space-y-4">
                   <h4 className="font-medium">Payment Methods</h4>
@@ -896,41 +889,36 @@ export default function SettingsPage() {
 
                 <Separator />
 
-                {/* Subscription management buttons - only show if subscriptions are enabled */}
-                {STUDIO_SUBSCRIPTION_ENABLED && (
-                  <>
-                    <div className="space-y-4">
-                      <h4 className="font-medium">Billing History</h4>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between py-2">
-                          <div>
-                            <p className="font-medium">Dec 15, 2023</p>
-                            <p className="text-sm text-muted-foreground">HitConnector Pro - Monthly</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-medium">$29.00</p>
-                            <Button variant="ghost" size="sm">Download</Button>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between py-2">
-                          <div>
-                            <p className="font-medium">Nov 15, 2023</p>
-                            <p className="text-sm text-muted-foreground">HitConnector Pro - Monthly</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-medium">$29.00</p>
-                            <Button variant="ghost" size="sm">Download</Button>
-                          </div>
-                        </div>
+                <div className="space-y-4">
+                  <h4 className="font-medium">Billing History</h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between py-2">
+                      <div>
+                        <p className="font-medium">Dec 15, 2023</p>
+                        <p className="text-sm text-muted-foreground">HitConnector Pro - Monthly</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium">$29.00</p>
+                        <Button variant="ghost" size="sm">Download</Button>
                       </div>
                     </div>
-
-                    <div className="flex justify-between pt-4">
-                      <Button variant="outline">Cancel Subscription</Button>
-                      <Button>Update Billing</Button>
+                    <div className="flex items-center justify-between py-2">
+                      <div>
+                        <p className="font-medium">Nov 15, 2023</p>
+                        <p className="text-sm text-muted-foreground">HitConnector Pro - Monthly</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium">$29.00</p>
+                        <Button variant="ghost" size="sm">Download</Button>
+                      </div>
                     </div>
-                  </>
-                )}
+                  </div>
+                </div>
+
+                <div className="flex justify-between pt-4">
+                  <Button variant="outline">Cancel Subscription</Button>
+                  <Button>Update Billing</Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

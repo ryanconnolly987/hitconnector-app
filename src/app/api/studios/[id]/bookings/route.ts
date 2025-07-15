@@ -61,14 +61,16 @@ export async function GET(
       );
     }
 
-    // Get bookings and booking requests for this studio
-    const bookings = getBookings().filter(booking => booking.studioId === studioId);
-    const bookingRequests = getBookingRequests().filter(req => req.studioId === studioId);
+    // Use unified activeBookings approach  
+    const { getActiveBookings } = await import('@/lib/bookings/activeBookings');
+    const bookings = await getActiveBookings(studioId);
+    const now = new Date();
+    
+    const upcoming = bookings.filter((b: any) => b.endDateTime > now);
+    const past = bookings.filter((b: any) => b.endDateTime <= now);
+    const pending = bookings.filter((b: any) => b.status === 'pending');
 
-    return NextResponse.json({
-      bookings,
-      bookingRequests
-    }, { status: 200 });
+    return NextResponse.json({ pending, upcoming, past }, { status: 200 });
   } catch (error) {
     console.error('GET studio bookings error:', error);
     return NextResponse.json(
