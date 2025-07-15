@@ -17,24 +17,6 @@ import { MusicPlayer } from "@/components/ui/music-player"
 export default function StudioProfilePage() {
   const { user } = useAuth()
   const { toast } = useToast()
-  const [bookingRequests, setBookingRequests] = useState<Array<{
-    id: string;
-    studioId: string;
-    studioName: string;
-    userId: string;
-    userName: string;
-    userEmail: string;
-    date: string;
-    startTime: string;
-    endTime: string;
-    room: string;
-    duration: number;
-    totalCost: number;
-    message: string;
-    status: 'pending' | 'approved' | 'rejected';
-    createdAt: string;
-    artistImage?: string;
-  }>>([])
   const [loading, setLoading] = useState(false)
   const [studioData, setStudioData] = useState({
     id: 1,
@@ -94,7 +76,6 @@ export default function StudioProfilePage() {
   useEffect(() => {
     if (user?.id) {
       loadStudioData()
-      fetchBookingRequests()
     }
   }, [user?.id]) // Add proper dependency array
 
@@ -219,102 +200,7 @@ export default function StudioProfilePage() {
     }
   }
 
-  const fetchBookingRequests = async () => {
-    if (!user?.email && !user?.id) return
-    
-    try {
-      console.time('fetchBookingRequests');
-      console.log('🔍 [Profile] Fetching studios for user:', { email: user.email, id: user.id })
-      
-      // First, find all studios owned by this user - using relative path for better performance
-      const studiosUrl = '/api/studios'
-      console.log('[DEBUG] Fetching from:', studiosUrl)
-      const studiosResponse = await fetch(studiosUrl)
-      if (!studiosResponse.ok) {
-        console.timeEnd('fetchBookingRequests');
-        return
-      }
-      
-      const studiosData = await studiosResponse.json()
-      console.log('📊 [Profile] All studios:', studiosData.studios.length)
-      
-      const userStudios = studiosData.studios.filter((studio: any) => 
-        studio.owner === user.email || studio.owner === user.id
-      )
-      
-      console.log('🏢 [Profile] User studios found:', userStudios.length, userStudios.map((s: any) => ({ id: s.id, name: s.name, owner: s.owner })))
-      
-      if (userStudios.length === 0) {
-        setBookingRequests([])
-        console.timeEnd('fetchBookingRequests');
-        return
-      }
-      
-      // Fetch booking requests for all user's studios - using parallel requests for better performance
-      const allBookingRequests: any[] = []
-      
-      const bookingRequestPromises = userStudios.map(async (studio: any) => {
-        console.log(`📋 [Profile] Fetching booking requests for studio: ${studio.id} (${studio.name})`)
-        
-        const response = await fetch(`${API_BASE_URL}/api/booking-requests?studioId=${studio.id}`)
-        if (response.ok) {
-          const data = await response.json()
-          console.log(`✅ [Profile] Found ${data.bookingRequests?.length || 0} booking requests for ${studio.name}`)
-          return data.bookingRequests || []
-        } else {
-          console.log(`❌ [Profile] Failed to fetch booking requests for ${studio.name}`)
-          return []
-        }
-      })
-      
-      const results = await Promise.all(bookingRequestPromises)
-      results.forEach(requests => allBookingRequests.push(...requests))
-      
-      console.log('🎯 [Profile] Total booking requests found:', allBookingRequests.length)
-      setBookingRequests(allBookingRequests)
-      console.timeEnd('fetchBookingRequests');
-    } catch (error) {
-      console.error('Error fetching booking requests:', error)
-      console.timeEnd('fetchBookingRequests');
-    }
-  }
 
-  const handleBookingRequestAction = async (requestId: string, action: 'approve' | 'reject') => {
-    try {
-      console.log(`📋 [Profile] ${action}ing booking request:`, requestId)
-      
-      const response = await fetch(`${API_BASE_URL}/api/booking-requests/${requestId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ action }),
-      })
-
-      if (response.ok) {
-        toast({
-          title: action === 'approve' ? "Booking Approved" : "Booking Rejected",
-          description: action === 'approve' 
-            ? "The booking has been added to your calendar." 
-            : "The booking request has been rejected.",
-        })
-        
-        // Refresh booking requests
-        fetchBookingRequests()
-      } else {
-        throw new Error('Failed to update booking request')
-      }
-    } catch (error) {
-      console.error('Error updating booking request:', error)
-      toast({
-        title: "Error",
-        description: "Failed to update booking request. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const getAmenityIcon = (amenity: string) => {
     switch (amenity.toLowerCase()) {
@@ -421,13 +307,12 @@ export default function StudioProfilePage() {
 
         {/* Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="hours">Hours</TabsTrigger>
             <TabsTrigger value="rooms">Rooms</TabsTrigger>
             <TabsTrigger value="gallery">Gallery</TabsTrigger>
             <TabsTrigger value="staff">Staff</TabsTrigger>
-            <TabsTrigger value="bookingRequests">Booking Requests</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -683,90 +568,7 @@ export default function StudioProfilePage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="bookingRequests" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Booking Requests</CardTitle>
-                <CardDescription>
-                  {bookingRequests.length > 0 ? `${bookingRequests.length} booking request(s)` : "No active booking requests"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {bookingRequests.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No booking requests yet.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {bookingRequests.map((request) => (
-                      <Card key={request.id} className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-start gap-4 flex-1">
-                            <Avatar>
-                              <AvatarImage src={request.artistImage} alt={request.userName} />
-                              <AvatarFallback>{request.userName?.charAt(0) || 'U'}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 space-y-2">
-                              <div className="flex items-center gap-2">
-                                <h4 className="font-medium">{request.userName}</h4>
-                                <Badge variant={
-                                  request.status === 'approved' ? 'default' : 
-                                  request.status === 'rejected' ? 'destructive' : 
-                                  'secondary'
-                                }>
-                                  {request.status === 'approved' ? 'Approved' : 
-                                   request.status === 'rejected' ? 'Rejected' : 
-                                   'Pending'}
-                                </Badge>
-                              </div>
-                              <div className="text-sm text-muted-foreground space-y-1">
-                                <div className="flex items-center gap-2">
-                                  <Calendar className="h-4 w-4" />
-                                  <span>{new Date(request.date).toLocaleDateString()}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Clock className="h-4 w-4" />
-                                  <span>{request.startTime} - {request.endTime}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <DollarSign className="h-4 w-4" />
-                                  <span>${request.totalCost} total</span>
-                                </div>
-                              </div>
-                              {request.message && (
-                                <p className="text-sm text-muted-foreground bg-muted/50 p-2 rounded">
-                                  &quot;{request.message}&quot;
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          {request.status === 'pending' && (
-                            <div className="flex gap-2 ml-4">
-                              <Button
-                                size="sm"
-                                onClick={() => handleBookingRequestAction(request.id, 'approve')}
-                                className="mr-2"
-                              >
-                                Approve
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={() => handleBookingRequestAction(request.id, 'reject')}
-                                variant="outline"
-                              >
-                                Reject
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+
         </Tabs>
       </div>
     </div>
