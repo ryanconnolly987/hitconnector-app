@@ -60,6 +60,7 @@ export default function StudioDashboardPage() {
   const [bookings, setBookings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [studioId, setStudioId] = useState<string>("")
+  const [revenue, setRevenue] = useState<number>(0)
   const [studioData, setStudioData] = useState({
     name: "Loading...",
     avatar: "/placeholder.svg?height=40&width=40",
@@ -219,6 +220,10 @@ export default function StudioDashboardPage() {
             // Extract upcoming bookings from the partitioned response
             const upcomingBookings = bookingsData.upcoming || []
             
+            // Set revenue data
+            setRevenue(bookingsData.revenue || 0)
+            console.log(`💰 [Dashboard] Monthly revenue: $${bookingsData.revenue || 0}`)
+            
             // Validate bookings
             const validBookings = upcomingBookings.filter((booking: any) => {
               if (!booking.id) {
@@ -233,6 +238,7 @@ export default function StudioDashboardPage() {
           } else {
             console.log(`❌ [Dashboard] Failed to fetch unified bookings`)
             setBookings([])
+            setRevenue(0)
           }
         } else {
           // No studio found, set defaults
@@ -413,6 +419,54 @@ export default function StudioDashboardPage() {
                 </Button>
               </div>
             </header>
+
+            {/* KPI Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">This Month Revenue</p>
+                      <p className="text-2xl font-bold">${revenue.toFixed(2)}</p>
+                    </div>
+                    <DollarSign className="h-8 w-8 text-green-600" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Pending Requests</p>
+                      <p className="text-2xl font-bold">{bookingRequests.length}</p>
+                    </div>
+                    <Clock className="h-8 w-8 text-yellow-600" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Upcoming Bookings</p>
+                      <p className="text-2xl font-bold">{bookings.length}</p>
+                    </div>
+                    <CalendarDays className="h-8 w-8 text-blue-600" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Followers</p>
+                      <p className="text-2xl font-bold">{followersCount}</p>
+                    </div>
+                    <Heart className="h-8 w-8 text-red-600" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
             <div className="grid gap-6 md:grid-cols-3">
               <Card className="md:col-span-2">

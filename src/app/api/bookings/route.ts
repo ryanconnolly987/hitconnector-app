@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { selectActiveBookings, partitionBookings } from '@/lib/bookingUtils';
+import { selectActiveBookings, partitionBookings, calculateRevenue } from '@/lib/bookingUtils';
 
 const BOOKINGS_FILE = path.join(process.cwd(), 'data', 'bookings.json');
 const USERS_FILE = path.join(process.cwd(), 'data', 'users.json');
@@ -104,7 +104,13 @@ export async function GET(request: NextRequest) {
       // Partition into pending, upcoming, and past
       const partitioned = partitionBookings(enhancedBookings);
       
-      return NextResponse.json(partitioned, { status: 200 });
+      // Calculate revenue for the current month
+      const revenue = calculateRevenue(enhancedBookings);
+      
+      return NextResponse.json({
+        ...partitioned,
+        revenue
+      }, { status: 200 });
     }
     
     if (userId) {

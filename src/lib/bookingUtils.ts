@@ -96,6 +96,26 @@ export const selectActiveBookings = (studioId: string) => {
   return allActive;
 };
 
+// Calculate revenue from completed and confirmed bookings within date range
+export const calculateRevenue = (bookings: Booking[], dateFrom?: Date, dateTo?: Date) => {
+  const now = new Date();
+  const defaultDateFrom = dateFrom || new Date(now.getFullYear(), now.getMonth(), 1); // Start of current month
+  const defaultDateTo = dateTo || new Date(now.getFullYear(), now.getMonth() + 1, 0); // End of current month
+  
+  return bookings
+    .filter(booking => {
+      // Only include completed and confirmed bookings
+      if (!['confirmed', 'completed'].includes(booking.status)) {
+        return false;
+      }
+      
+      // Check if booking falls within the date range
+      const bookingDate = new Date(booking.date);
+      return bookingDate >= defaultDateFrom && bookingDate <= defaultDateTo;
+    })
+    .reduce((sum, booking) => sum + (booking.totalCost || 0), 0);
+};
+
 // Partition bookings into pending, upcoming, and past
 export const partitionBookings = (bookings: Booking[]) => {
   const now = new Date();

@@ -80,6 +80,7 @@ export default function BookingsPage() {
   const [confirmedBookings, setConfirmedBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
   const [cancelLoading, setCancelLoading] = useState(false)
+  const [revenue, setRevenue] = useState<number>(0)
   const { user } = useAuth()
   const { toast } = useToast()
 
@@ -111,6 +112,12 @@ export default function BookingsPage() {
       if (bookingsResponse.ok) {
         const bookingsData = await bookingsResponse.json()
         console.log('📥 [Bookings] Unified bookings data:', bookingsData)
+        
+        // Set revenue if available
+        if (bookingsData.revenue !== undefined) {
+          setRevenue(bookingsData.revenue)
+          console.log(`💰 [Bookings] Monthly revenue: $${bookingsData.revenue}`)
+        }
         
         // Handle both old format (for user bookings) and new format (for studio bookings)
         let allBookings = []
@@ -380,8 +387,8 @@ export default function BookingsPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Revenue</p>
-                  <p className="text-2xl font-bold">${confirmedBookings.reduce((sum, b) => sum + b.totalCost, 0)}</p>
+                  <p className="text-sm font-medium text-muted-foreground">This Month Revenue</p>
+                  <p className="text-2xl font-bold">${revenue.toFixed(2)}</p>
                 </div>
                 <DollarSign className="h-8 w-8 text-purple-600" />
               </div>
