@@ -275,16 +275,18 @@ function MessagesPageContent() {
     if (!user?.id) return
 
     try {
-      await fetch(`/api/conversations/${conversationId}/messages`, {
+      const response = await fetch(`/api/conversations/${conversationId}/read`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id })
       })
       
-      // Update local conversation
-      setConversations(prev => prev.map(conv => 
-        conv.id === conversationId ? { ...conv, unreadCount: 0 } : conv
-      ))
+      if (response.ok) {
+        // Update local conversation to clear unread count
+        setConversations(prev => prev.map(conv => 
+          conv.id === conversationId ? { ...conv, unreadCount: 0 } : conv
+        ))
+      }
     } catch (error) {
       console.error('Error marking messages as read:', error)
     }
@@ -294,6 +296,11 @@ function MessagesPageContent() {
     setSelectedConversation(conversation)
     setShowSidebar(false) // Hide sidebar on mobile
     await loadConversationMessages(conversation.id)
+    
+    // Mark conversation as read when opened
+    if (conversation.unreadCount > 0) {
+      await markMessagesAsRead(conversation.id)
+    }
   }
 
   const handleSendMessage = async (text: string, attachment?: { type: 'attachment'; url: string; filename: string }) => {
