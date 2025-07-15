@@ -22,6 +22,7 @@ interface Conversation {
   lastMessage?: Message;
   updatedAt: string;
   unreadCount: { [userId: string]: number };
+  deletedAt?: string;
 }
 
 interface MessagesData {
@@ -147,9 +148,9 @@ export async function GET(request: NextRequest) {
 
     const data = getMessagesData();
     
-    // Get conversations where user is a participant
+    // Get conversations where user is a participant and not deleted
     const userConversations = data.conversations
-      .filter(conv => conv.participants.includes(userId))
+      .filter(conv => conv.participants.includes(userId) && !conv.deletedAt)
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
       .map(conv => {
         // Get participant info for each conversation

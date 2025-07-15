@@ -22,6 +22,7 @@ interface Conversation {
   lastMessage?: Message;
   updatedAt: string;
   unreadCount: { [userId: string]: number };
+  deletedAt?: string;
 }
 
 interface MessagesData {
@@ -147,9 +148,9 @@ export async function GET(
 
     const data = getMessagesData();
     
-    // Verify user is part of this conversation
+    // Verify user is part of this conversation and it's not deleted
     const conversation = data.conversations.find(conv => 
-      conv.id === conversationId && conv.participants.includes(userId)
+      conv.id === conversationId && conv.participants.includes(userId) && !conv.deletedAt
     );
 
     if (!conversation) {

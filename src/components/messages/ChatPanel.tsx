@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import { MessageInput } from './MessageInput'
+import { ConversationHeader } from './ConversationHeader'
 
 interface Message {
   id: string;
@@ -63,6 +64,7 @@ interface ChatPanelProps {
   onBack?: () => void;
   loading?: boolean;
   sending?: boolean;
+  onConversationDeleted?: (conversationId: string) => void;
 }
 
 export function ChatPanel({
@@ -73,7 +75,8 @@ export function ChatPanel({
   onSendMessage,
   onBack,
   loading = false,
-  sending = false
+  sending = false,
+  onConversationDeleted
 }: ChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -209,35 +212,12 @@ export function ChatPanel({
   return (
     <div className="flex-1 flex flex-col bg-background">
       {/* Chat Header */}
-      <div className="p-4 border-b bg-background/95 backdrop-blur sticky top-0 z-10">
-        <div className="flex items-center space-x-3">
-          {onBack && (
-            <Button variant="ghost" size="icon" onClick={onBack} className="md:hidden">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          )}
-          
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={otherParticipant?.profileImage} />
-            <AvatarFallback className="bg-primary/10 text-primary font-medium">
-              {otherParticipant?.name?.charAt(0)?.toUpperCase() || '?'}
-            </AvatarFallback>
-          </Avatar>
-          
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold truncate">
-              {otherParticipant?.name || 'Unknown User'}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {otherParticipant?.role === 'studio' ? 'Recording Studio' : 'Artist'}
-            </p>
-          </div>
-          
-          <Button variant="ghost" size="icon">
-            <MoreVertical className="h-5 w-5" />
-          </Button>
-        </div>
-      </div>
+      <ConversationHeader
+        conversation={conversation}
+        otherParticipant={otherParticipant}
+        onBack={onBack}
+        onConversationDeleted={onConversationDeleted || (() => {})}
+      />
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-1">

@@ -352,6 +352,21 @@ function MessagesPageContent() {
     setMessages([])
   }
 
+  const handleConversationDeleted = (conversationId: string) => {
+    // Remove conversation from the list
+    setConversations(prev => prev.filter(conv => conv.id !== conversationId))
+    
+    // If the deleted conversation was currently selected, go back to conversation list
+    if (selectedConversation?.id === conversationId) {
+      handleBack()
+    }
+    
+    toast({
+      title: "Conversation deleted",
+      description: "The conversation has been removed from your inbox"
+    })
+  }
+
   const handleBackToDashboard = () => {
     const role = user?.role
     router.push(role === 'studio' ? '/studio-dashboard' : '/dashboard')
@@ -418,6 +433,7 @@ function MessagesPageContent() {
             onBack={handleBack}
             loading={loadingMessages}
             sending={sending}
+            onConversationDeleted={handleConversationDeleted}
           />
         </div>
       </div>
