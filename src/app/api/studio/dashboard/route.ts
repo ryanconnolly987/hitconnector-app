@@ -22,6 +22,11 @@ export async function GET(request: NextRequest) {
     const upcoming = bookings.filter((b: any) => b.status === 'CONFIRMED' && b.endDateTime > now);
     const past = bookings.filter((b: any) => b.status === 'COMPLETED' || (b.status === 'CONFIRMED' && b.endDateTime <= now));
     
+    // Strip orphan PENDING records that have a calendar date but were never accepted
+    const orphanCutoff = new Date(); // now
+    const cleanedUpcoming = upcoming.filter((b: any) => b.status === 'CONFIRMED');
+    const cleanedPending = pending; // leave as-is for requests panel
+    
     // Compute monthly revenue
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
@@ -30,7 +35,7 @@ export async function GET(request: NextRequest) {
       .filter((b: any) => b.startDateTime >= monthStart && b.startDateTime <= monthEnd)
       .reduce((sum: number, b: any) => sum + b.totalCost, 0);
     
-    return NextResponse.json({ pending, upcoming, past, revenue }, { status: 200 });
+    return NextResponse.json({ pending: cleanedPending, upcoming: cleanedUpcoming, past, revenue }, { status: 200 });
   } catch (error) {
     console.error('GET studio dashboard error:', error);
     return NextResponse.json(

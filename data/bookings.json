@@ -50,12 +50,13 @@
       "message": "",
       "staffId": null,
       "staffName": null,
-      "status": "confirmed",
+      "status": "COMPLETED",
       "paymentIntentId": "pi_3RkIZrHx5aQsAUd41IIXduJI",
       "paymentStatus": "captured",
       "createdAt": "2025-07-13T05:35:56.200Z",
-      "updatedAt": "2025-07-13T05:36:40.090Z",
-      "confirmedAt": "2025-07-13T05:36:40.091Z"
+      "updatedAt": "2025-07-15T18:38:47.420Z",
+      "confirmedAt": "2025-07-13T05:36:40.091Z",
+      "completedAt": "2025-07-15T18:38:47.420Z"
     },
     {
       "id": "booking_1752466199876_nw59rvt2u",
@@ -78,12 +79,13 @@
       "message": "",
       "staffId": null,
       "staffName": null,
-      "status": "confirmed",
+      "status": "COMPLETED",
       "paymentIntentId": "pi_3RkdiFHx5aQsAUd40PNCMvCi",
       "paymentStatus": "captured",
       "createdAt": "2025-07-14T04:09:59.876Z",
-      "updatedAt": "2025-07-14T04:10:20.336Z",
-      "confirmedAt": "2025-07-14T04:10:20.337Z"
+      "updatedAt": "2025-07-15T18:38:47.420Z",
+      "confirmedAt": "2025-07-14T04:10:20.337Z",
+      "completedAt": "2025-07-15T18:38:47.420Z"
     },
     {
       "id": "booking_1752471454954_bffq9rbmc",
@@ -106,12 +108,13 @@
       "message": "",
       "staffId": null,
       "staffName": null,
-      "status": "confirmed",
+      "status": "COMPLETED",
       "paymentIntentId": "pi_3Rkf50Hx5aQsAUd41tMLE57y",
       "paymentStatus": "captured",
       "createdAt": "2025-07-14T05:37:34.954Z",
-      "updatedAt": "2025-07-14T05:38:01.159Z",
-      "confirmedAt": "2025-07-14T05:38:01.160Z"
+      "updatedAt": "2025-07-15T18:38:47.420Z",
+      "confirmedAt": "2025-07-14T05:38:01.160Z",
+      "completedAt": "2025-07-15T18:38:47.420Z"
     },
     {
       "id": "booking_1752537655733_iqetea2uy",
@@ -140,6 +143,34 @@
       "createdAt": "2025-07-15T00:00:55.733Z",
       "updatedAt": "2025-07-15T00:08:36.107Z",
       "confirmedAt": "2025-07-15T00:08:36.107Z"
+    },
+    {
+      "id": "booking_1752604812985_uip49uce7",
+      "studioId": "studio_1752456531232_6pcbzlmh1",
+      "studioName": "The dojo",
+      "roomId": "room-1751162773900-kapqq1",
+      "roomName": "studio b",
+      "userId": "user_1752282588234_3wnbsnjw6",
+      "userName": "Lil Ryry",
+      "userEmail": "ryanconnolly987@gmail.com",
+      "date": "2025-07-18",
+      "startTime": "20:00",
+      "endTime": "22:00",
+      "duration": 2,
+      "hourlyRate": 20,
+      "totalCost": 40,
+      "baseAmount": 40,
+      "companyFee": 1.2,
+      "totalAmount": 41.2,
+      "message": "",
+      "staffId": "staff-1751157491424-29pjhp",
+      "staffName": "OJack",
+      "status": "CONFIRMED",
+      "paymentIntentId": "pi_3RlDlwHx5aQsAUd405nzQ5JV",
+      "paymentStatus": "authorized",
+      "createdAt": "2025-07-15T18:40:12.985Z",
+      "updatedAt": "2025-07-15T18:40:32.124Z",
+      "confirmedAt": "2025-07-15T18:40:32.124Z"
     }
   ]
 }

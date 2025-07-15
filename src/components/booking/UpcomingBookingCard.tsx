@@ -62,9 +62,7 @@ export function UpcomingBookingCard({ booking }: UpcomingBookingCardProps) {
           </div>
         )}
         <div className="flex-1">
-          <Badge variant={booking.status === "confirmed" ? "default" : "outline"}>
-            {booking.status === "confirmed" ? "Confirmed" : "Pending"}
-          </Badge>
+          {booking.status === 'PENDING' && <Badge>Pending</Badge>}
         </div>
       </CardHeader>
       <CardContent className="pb-2">

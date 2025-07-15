@@ -105,11 +105,16 @@ export async function getActiveBookings(studioId: string) {
         artist: artistInfo ? {
           displayName: artistInfo.name || booking.userName,
           slug: artistInfo.slug,
-          avatarUrl: artistInfo.profileImage
+          avatarUrl: artistInfo.profileImage  // Ensure avatarUrl is present
         } : null,
         engineer: booking.staffName ? {
           displayName: booking.staffName
         } : null,
+        // Add flat fields for backward compatibility
+        artistId: booking.userId,
+        artistName: artistInfo?.name || booking.userName,
+        artistSlug: artistInfo?.slug,
+        artistProfilePicture: artistInfo?.profileImage,  // Ensure artistProfilePicture is present
         // Convert date fields to Date objects for consistent filtering
         startDateTime: new Date(`${booking.date}T${booking.startTime}`),
         endDateTime: new Date(`${booking.date}T${booking.endTime}`),
