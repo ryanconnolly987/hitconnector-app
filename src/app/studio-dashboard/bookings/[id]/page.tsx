@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { format } from "date-fns"
+import { format, parseISO } from "date-fns"
 import { ArrowLeft, Calendar, Clock, User, DollarSign, MessageSquare, X, CheckCircle, AlertCircle } from "lucide-react"
 import { useAuth } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
@@ -311,7 +311,7 @@ function BookingDetailsPageClient({ bookingId }: { bookingId: string }) {
                     <Label className="text-sm font-medium">Date</Label>
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <p className="text-sm">{format(new Date(booking.date), "EEEE, MMMM dd, yyyy")}</p>
+                      <p className="text-sm">{format(parseISO(booking.date), "EEEE, MMMM dd, yyyy")}</p>
                     </div>
                   </div>
                   <div>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { Calendar, Clock, User, DollarSign, X } from 'lucide-react'
 import { useBookingDetails } from './BookingDetailsProvider'
 import { useAuth } from '@/lib/auth'
@@ -171,7 +171,7 @@ export function BookingDetailsModal() {
               )}
               <div>
                 <Label>Date</Label>
-                <p>{format(new Date(booking.date), "MMM dd, yyyy")}</p>
+                <p>{format(parseISO(booking.date), "MMM dd, yyyy")}</p>
               </div>
               <div>
                 <Label>Time</Label>

@@ -1,6 +1,6 @@
 "use client"
 
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { CalendarDays, Clock } from 'lucide-react'
 import { useBookingDetails } from './BookingDetailsProvider'
 import { buildArtistProfileHrefFromParams } from '@/lib/url-utils'
@@ -71,7 +71,7 @@ export function UpcomingBookingCard({ booking }: UpcomingBookingCardProps) {
         <div className="grid gap-2">
           <div className="flex items-center gap-2 text-sm">
             <CalendarDays className="h-4 w-4 text-muted-foreground" />
-            <span>{booking.date ? format(new Date(booking.date), "MMM dd, yyyy") : "Date not available"}</span>
+            <span>{booking.date ? format(parseISO(booking.date), "MMM dd, yyyy") : "Date not available"}</span>
           </div>
           <div className="flex items-center gap-2 text-sm">
             <Clock className="h-4 w-4 text-muted-foreground" />

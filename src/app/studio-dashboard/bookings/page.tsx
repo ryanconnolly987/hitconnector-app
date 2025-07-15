@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { format, addDays, subDays } from "date-fns"
+import { format, addDays, subDays, parseISO } from "date-fns"
 import { ArrowLeft, Calendar, Clock, User, DollarSign, Check, X, MessageSquare, Filter, Search } from "lucide-react"
 import { useAuth } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
@@ -443,7 +443,7 @@ export default function BookingsPage() {
                           <div className="flex items-center gap-4 text-sm">
                             <div className="flex items-center gap-1">
                               <Calendar className="h-4 w-4" />
-                              {format(new Date(booking.date), "MMM dd, yyyy")}
+                              {format(parseISO(booking.date), "MMM dd, yyyy")}
                             </div>
                             <div className="flex items-center gap-1">
                               <Clock className="h-4 w-4" />
@@ -501,7 +501,7 @@ export default function BookingsPage() {
                                   )}
                                   <div>
                                     <Label>Date</Label>
-                                    <p>{format(new Date(selectedBooking.date), "MMM dd, yyyy")}</p>
+                                    <p>{format(parseISO(selectedBooking.date), "MMM dd, yyyy")}</p>
                                   </div>
                                   <div>
                                     <Label>Time</Label>
@@ -615,7 +615,7 @@ export default function BookingsPage() {
                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
                             <div className="flex items-center gap-1">
                               <Calendar className="h-4 w-4" />
-                              {format(new Date(booking.date), "MMM dd, yyyy")}
+                              {format(parseISO(booking.date), "MMM dd, yyyy")}
                             </div>
                             <div className="flex items-center gap-1">
                               <Clock className="h-4 w-4" />
@@ -673,7 +673,7 @@ export default function BookingsPage() {
                                   )}
                                   <div>
                                     <Label>Date</Label>
-                                    <p>{format(new Date(detailsBooking.date), "MMM dd, yyyy")}</p>
+                                    <p>{format(parseISO(detailsBooking.date), "MMM dd, yyyy")}</p>
                                   </div>
                                   <div>
                                     <Label>Time</Label>
@@ -709,7 +709,7 @@ export default function BookingsPage() {
                                 {detailsBooking.approvedAt && (
                                   <div>
                                     <Label>Approved At</Label>
-                                    <p className="text-sm">{format(new Date(detailsBooking.approvedAt), "MMM dd, yyyy HH:mm")}</p>
+                                    <p className="text-sm">{format(parseISO(detailsBooking.approvedAt), "MMM dd, yyyy HH:mm")}</p>
                                   </div>
                                 )}
                               </div>
@@ -792,7 +792,7 @@ export default function BookingsPage() {
                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
                             <div className="flex items-center gap-1">
                               <Calendar className="h-4 w-4" />
-                              {format(new Date(booking.date), "MMM dd, yyyy")}
+                              {format(parseISO(booking.date), "MMM dd, yyyy")}
                             </div>
                             <div className="flex items-center gap-1">
                               <Clock className="h-4 w-4" />
@@ -850,7 +850,7 @@ export default function BookingsPage() {
                                   )}
                                   <div>
                                     <Label>Date</Label>
-                                    <p>{format(new Date(detailsBooking.date), "MMM dd, yyyy")}</p>
+                                    <p>{format(parseISO(detailsBooking.date), "MMM dd, yyyy")}</p>
                                   </div>
                                   <div>
                                     <Label>Time</Label>
@@ -886,7 +886,7 @@ export default function BookingsPage() {
                                 {detailsBooking.approvedAt && (
                                   <div>
                                     <Label>Approved At</Label>
-                                    <p className="text-sm">{format(new Date(detailsBooking.approvedAt), "MMM dd, yyyy HH:mm")}</p>
+                                    <p className="text-sm">{format(parseISO(detailsBooking.approvedAt), "MMM dd, yyyy HH:mm")}</p>
                                   </div>
                                 )}
                               </div>

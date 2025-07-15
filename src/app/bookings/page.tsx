@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from "react"
-import { format } from "date-fns"
+import { format, parseISO } from "date-fns"
 import { Calendar, Clock, MapPin, Music, DollarSign, CheckCircle, XCircle, AlertCircle, MessageSquare, X, User } from "lucide-react"
 import { useAuth } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"

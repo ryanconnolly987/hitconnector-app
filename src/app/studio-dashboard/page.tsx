@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
-import { format, addDays, startOfWeek, eachDayOfInterval } from "date-fns"
+import { format, addDays, startOfWeek, eachDayOfInterval, parseISO } from "date-fns"
 import {
   CalendarDays,
   Clock,
@@ -629,7 +629,7 @@ export default function StudioDashboardPage() {
                           <div className="space-y-1 text-sm">
                             <div className="flex items-center gap-2">
                               <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                              <span>{request.date ? format(new Date(request.date), "MMM dd, yyyy") : "Date not available"}</span>
+                              <span>{request.date ? format(parseISO(request.date), "MMM dd, yyyy") : "Date not available"}</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <Clock className="h-4 w-4 text-muted-foreground" />
