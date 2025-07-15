@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { artistBriefSelect, type ArtistBrief } from '@/lib/bookings/activeBookings';
 
 const BOOKINGS_FILE = path.join(process.cwd(), 'data', 'bookings.json');
 const BOOKING_REQUESTS_FILE = path.join(process.cwd(), 'data', 'booking-requests.json');
@@ -60,40 +61,39 @@ function saveBookingRequests(bookingRequests: any[]): void {
   }
 }
 
-// Helper function to get user info with profile data including avatar
-function getUserInfo(userId: string): { id: string; name: string; email: string; role: string; profileImage?: string; slug?: string } | null {
+// Helper function to get user info consistent with artistBriefSelect
+function getUserInfo(userId: string): ArtistBrief | null {
   try {
+    let user = null;
+    let profile = null;
+
     // Get basic user info
-    let users: any[] = [];
     if (fs.existsSync(USERS_FILE)) {
       const usersData = fs.readFileSync(USERS_FILE, 'utf8');
-      users = JSON.parse(usersData);
+      const users = JSON.parse(usersData);
+      user = users.find((u: any) => u.id === userId);
     }
-    
-    const user = users.find(u => u.id === userId);
-    if (!user) return null;
 
     // Get profile info for avatar
-    let profiles: any[] = [];
     if (fs.existsSync(PROFILES_FILE)) {
       const profilesData = fs.readFileSync(PROFILES_FILE, 'utf8');
-      profiles = JSON.parse(profilesData);
+      const profiles = JSON.parse(profilesData);
+      profile = profiles.find((p: any) => p.id === userId);
     }
     
-    const profile = profiles.find(p => p.id === userId);
-    
-    return {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      profileImage: profile?.profileImage,
-      slug: user.slug
-    };
+    // Return data consistent with artistBriefSelect format
+    if (user || profile) {
+      return {
+        id: userId,
+        displayName: user?.name || profile?.name || 'Unknown Artist',
+        slug: user?.slug || profile?.slug || null,
+        avatarUrl: profile?.profileImage || null  // ABSOLUTELY ensure avatarUrl is present
+      };
+    }
   } catch (error) {
     console.error('Error getting user info:', error);
-    return null;
   }
+  return null;
 }
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -129,9 +129,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const enhancedBooking = {
       ...booking,
       artistId: booking.userId,
-      artistName: artistInfo?.name || booking.userName,
+      artistName: artistInfo?.displayName || booking.userName,
       artistSlug: artistInfo?.slug,
-      artistProfilePicture: artistInfo?.profileImage
+      artistProfilePicture: artistInfo?.avatarUrl  // ABSOLUTELY ensure avatarUrl is present
     };
 
     return NextResponse.json(enhancedBooking);

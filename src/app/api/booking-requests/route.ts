@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { stripe, calculateTotalWithFee, dollarsToCents } from '@/lib/stripe';
 import { findUserById } from '@/lib/user-store';
+import { artistBriefSelect, type ArtistBrief } from '@/lib/bookings/activeBookings';
 
 const BOOKINGS_FILE = path.join(process.cwd(), 'data', 'bookings.json'); // Updated to use unified bookings file
 const USERS_FILE = path.join(process.cwd(), 'data', 'users.json');
@@ -85,30 +86,19 @@ function getProfiles(): any[] {
   return [];
 }
 
-function getUserData(userId: string): any {
+function getUserData(userId: string): ArtistBrief | null {
   const users = getUsers();
   const profiles = getProfiles();
 
   const user = users.find((u: any) => u.id === userId);
   const profile = profiles.find((p: any) => p.userId === userId);
 
-  if (profile) {
+  if (profile || user) {
     return {
       id: userId,
-      name: profile.name || user?.name || 'Unknown',
-      email: user?.email || 'unknown@example.com',
-      profileImage: profile.profileImage,
-      slug: profile.slug
-    };
-  }
-
-  if (user) {
-    return {
-      id: userId,
-      name: user.name || 'Unknown',
-      email: user.email || 'unknown@example.com',
-      profileImage: null,
-      slug: null
+      displayName: profile?.name || user?.name || 'Unknown Artist',
+      slug: profile?.slug || user?.slug || null,
+      avatarUrl: profile?.profileImage || null  // ABSOLUTELY ensure avatarUrl is present
     };
   }
 
@@ -136,9 +126,9 @@ export async function GET(request: NextRequest) {
         return {
           ...booking,
           artistId: booking.userId,
-          artistName: userData?.name || booking.userName,
+          artistName: userData?.displayName || booking.userName,
           artistSlug: userData?.slug,
-          artistProfilePicture: userData?.profileImage
+          artistProfilePicture: userData?.avatarUrl  // ABSOLUTELY ensure avatarUrl is present
         };
       });
 

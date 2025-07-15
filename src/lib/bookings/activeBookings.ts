@@ -2,30 +2,53 @@ import fs from 'fs';
 import path from 'path';
 
 const BOOKINGS_FILE = path.join(process.cwd(), 'data', 'bookings.json');
+
+// Shared constant for consistent artist brief selection across all booking APIs
+export const artistBriefSelect = {
+  id: true,
+  displayName: true,
+  slug: true,
+  avatarUrl: true
+} as const;
+
+// Type definition for the artist brief
+export interface ArtistBrief {
+  id: string;
+  displayName: string;
+  slug: string | null;
+  avatarUrl: string | null;
+}
 const USERS_FILE = path.join(process.cwd(), 'data', 'users.json');
 const PROFILES_FILE = path.join(process.cwd(), 'data', 'user-profiles.json');
 
-// Helper function to get user info
-function getUserInfo(userId: string): any {
+// Helper function to get user info consistent with artistBriefSelect
+function getUserInfo(userId: string): ArtistBrief | null {
   try {
+    let user = null;
+    let profile = null;
+
+    // Get basic user info
     if (fs.existsSync(USERS_FILE)) {
       const usersData = fs.readFileSync(USERS_FILE, 'utf8');
       const users = JSON.parse(usersData).users || [];
-      const user = users.find((u: any) => u.id === userId);
-      if (user) return user;
+      user = users.find((u: any) => u.id === userId);
     }
 
+    // Get profile info for avatar
     if (fs.existsSync(PROFILES_FILE)) {
       const profilesData = fs.readFileSync(PROFILES_FILE, 'utf8');
       const profiles = JSON.parse(profilesData).profiles || [];
-      const profile = profiles.find((p: any) => p.userId === userId);
-      if (profile) {
-        return {
-          name: profile.name,
-          slug: profile.slug,
-          profileImage: profile.profileImage
-        };
-      }
+      profile = profiles.find((p: any) => p.userId === userId);
+    }
+
+    // Return data consistent with artistBriefSelect format
+    if (user || profile) {
+      return {
+        id: userId,
+        displayName: user?.name || profile?.name || 'Unknown Artist',
+        slug: user?.slug || profile?.slug || null,
+        avatarUrl: profile?.profileImage || null  // ABSOLUTELY ensure avatarUrl is present
+      };
     }
   } catch (error) {
     console.error('Error reading user info:', error);
@@ -103,18 +126,18 @@ export async function getActiveBookings(studioId: string) {
                booking.status === 'confirmed' ? 'CONFIRMED' : 
                booking.status === 'completed' ? 'COMPLETED' : booking.status,
         artist: artistInfo ? {
-          displayName: artistInfo.name || booking.userName,
+          displayName: artistInfo.displayName || booking.userName,
           slug: artistInfo.slug,
-          avatarUrl: artistInfo.profileImage  // Ensure avatarUrl is present
+          avatarUrl: artistInfo.avatarUrl  // ABSOLUTELY ensure avatarUrl is present
         } : null,
         engineer: booking.staffName ? {
           displayName: booking.staffName
         } : null,
         // Add flat fields for backward compatibility
         artistId: booking.userId,
-        artistName: artistInfo?.name || booking.userName,
+        artistName: artistInfo?.displayName || booking.userName,
         artistSlug: artistInfo?.slug,
-        artistProfilePicture: artistInfo?.profileImage,  // Ensure artistProfilePicture is present
+        artistProfilePicture: artistInfo?.avatarUrl,  // ABSOLUTELY ensure artistProfilePicture is present
         // Convert date fields to Date objects for consistent filtering
         startDateTime: new Date(`${booking.date}T${booking.startTime}`),
         endDateTime: new Date(`${booking.date}T${booking.endTime}`),
