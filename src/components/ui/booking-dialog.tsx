@@ -216,34 +216,68 @@ export function BookingDialog({ studio, children }: BookingDialogProps) {
     setIsLoading(true)
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/booking-requests`, {
+      const requestUrl = `${API_BASE_URL}/api/booking-requests`
+      console.info('🚀 [Booking-Dialog] Making booking request to URL:', requestUrl)
+      
+      const requestBody = {
+        studioId: studio.id,
+        studioName: studio.name,
+        roomId: selectedRoom?.id,
+        roomName: selectedRoom?.name,
+        userId: user?.id,
+        userName: user?.name,
+        userEmail: user?.email,
+        date: bookingData.date,
+        startTime: bookingData.startTime,
+        endTime: bookingData.endTime,
+        duration: calculateDuration(),
+        hourlyRate: selectedRoom?.hourlyRate,
+        totalCost: totalCost,
+        message: bookingData.message,
+        staffId: selectedStaff?.id || null,
+        staffName: selectedStaff?.name || null,
+        paymentMethodId: selectedPaymentMethod
+      }
+      
+      console.info('📝 [Booking-Dialog] Request payload:', {
+        studioId: requestBody.studioId,
+        userId: requestBody.userId,
+        date: requestBody.date,
+        startTime: requestBody.startTime,
+        endTime: requestBody.endTime,
+        totalCost: requestBody.totalCost
+      })
+
+      const response = await fetch(requestUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          studioId: studio.id,
-          studioName: studio.name,
-          roomId: selectedRoom?.id,
-          roomName: selectedRoom?.name,
-          userId: user?.id,
-          userName: user?.name,
-          userEmail: user?.email,
-          date: bookingData.date,
-          startTime: bookingData.startTime,
-          endTime: bookingData.endTime,
-          duration: calculateDuration(),
-          hourlyRate: selectedRoom?.hourlyRate,
-          totalCost: totalCost,
-          message: bookingData.message,
-          staffId: selectedStaff?.id || null,
-          staffName: selectedStaff?.name || null,
-          paymentMethodId: selectedPaymentMethod
-        }),
+        body: JSON.stringify(requestBody),
       })
+
+      console.info('📡 [Booking-Dialog] Response status:', response.status)
+      console.info('📡 [Booking-Dialog] Response headers:', Object.fromEntries(response.headers.entries()))
+
+      // Check if the response is JSON before trying to parse
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('❌ [Booking-Dialog] Received non-JSON response:', contentType)
+        const responseText = await response.text()
+        console.error('❌ [Booking-Dialog] Response text (first 500 chars):', responseText.substring(0, 500))
+        
+        toast({
+          title: "Booking Failed",
+          description: "Server returned an invalid response. Please check your connection and try again.",
+          variant: "destructive"
+        })
+        return
+      }
 
       if (response.ok) {
         const booking = await response.json()
+        console.info('✅ [Booking-Dialog] Booking created successfully:', booking.bookingRequest?.id)
+        
         toast({
           title: "Booking Request Sent!",
           description: `Your booking request for ${selectedRoom?.name} at ${studio.name} has been sent. The studio will respond within 24 hours.`
@@ -256,10 +290,18 @@ export function BookingDialog({ studio, children }: BookingDialogProps) {
         setSelectedPaymentMethod("")
       } else {
         const error = await response.json()
+        console.error('❌ [Booking-Dialog] API error response:', error)
+        
         if (response.status === 409) {
           toast({
             title: "Time Slot Unavailable",
             description: "This time slot is already booked. Please select a different time or room.",
+            variant: "destructive"
+          })
+        } else if (response.status === 503) {
+          toast({
+            title: "Payment System Unavailable",
+            description: error.error || "Payment system is temporarily unavailable. Please try again later.",
             variant: "destructive"
           })
         } else {
@@ -271,10 +313,10 @@ export function BookingDialog({ studio, children }: BookingDialogProps) {
         }
       }
     } catch (error) {
-      console.error('Error creating booking:', error)
+      console.error('❌ [Booking-Dialog] Network or unexpected error:', error)
       toast({
         title: "Booking Failed",
-        description: "An unexpected error occurred. Please try again.",
+        description: "An unexpected error occurred. Please check your connection and try again.",
         variant: "destructive"
       })
     } finally {

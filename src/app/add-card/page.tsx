@@ -67,12 +67,13 @@ function AddCardForm({ onSuccess }: AddCardFormProps) {
           body: JSON.stringify({ userId: user.id }),
         });
 
-        const setupData = await setupResponse.json();
-        if (setupData.success) {
-          setClientSecret(setupData.clientSecret);
-        } else {
-          throw new Error(setupData.error);
+        if (!setupResponse.ok) {
+          const errorData = await setupResponse.json();
+          throw new Error(errorData.error || 'Failed to create setup intent');
         }
+
+        const setupData = await setupResponse.json();
+        setClientSecret(setupData.clientSecret);
       } catch (error) {
         console.error('Error setting up payment:', error);
         toast({

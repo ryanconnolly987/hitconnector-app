@@ -129,7 +129,7 @@ function saveMessagesData(data: MessagesData): void {
   }
 }
 
-// GET /api/conversations/[id]/messages - Get messages for a conversation with sender info
+// GET /api/conversations/[id]/messages - Get messages for a conversation with sender info and pagination
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -138,10 +138,21 @@ export async function GET(
     const { id: conversationId } = await params;
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
+    const before = searchParams.get('before'); // ISO timestamp for cursor-based pagination
+    const limitParam = searchParams.get('limit');
+    const limit = limitParam ? parseInt(limitParam, 10) : 20; // Default 20 messages
 
     if (!userId) {
       return NextResponse.json(
         { error: 'User ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate limit parameter
+    if (limit < 1 || limit > 100) {
+      return NextResponse.json(
+        { error: 'Limit must be between 1 and 100' },
         { status: 400 }
       );
     }
@@ -160,10 +171,36 @@ export async function GET(
       );
     }
 
-    // Get messages for this conversation with sender info
-    const messages = data.messages
-      .filter(msg => msg.conversationId === conversationId)
-      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+    // Get all messages for this conversation
+    let filteredMessages = data.messages
+      .filter(msg => msg.conversationId === conversationId);
+
+    // Apply cursor-based pagination (before timestamp)
+    if (before) {
+      const beforeDate = new Date(before);
+      if (isNaN(beforeDate.getTime())) {
+        return NextResponse.json(
+          { error: 'Invalid before timestamp format' },
+          { status: 400 }
+        );
+      }
+      filteredMessages = filteredMessages.filter(msg => 
+        new Date(msg.timestamp).getTime() < beforeDate.getTime()
+      );
+    }
+
+    // Sort by timestamp descending (newest first for pagination), then take limit + 1 to check if there are more
+    const sortedMessages = filteredMessages
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, limit + 1);
+
+    // Check if there are more messages (hasMore)
+    const hasMore = sortedMessages.length > limit;
+    const messages = hasMore ? sortedMessages.slice(0, limit) : sortedMessages;
+
+    // Reverse to show oldest first in UI (Instagram style)
+    const finalMessages = messages
+      .reverse()
       .map(message => {
         const senderInfo = getUserInfo(message.senderId);
         return {
@@ -195,9 +232,17 @@ export async function GET(
       participantsInfo
     };
 
+    // Cursor for next page (timestamp of oldest message in current page)
+    const nextCursor = finalMessages.length > 0 ? finalMessages[0].timestamp : null;
+
     return NextResponse.json({ 
       conversation: conversationWithInfo,
-      messages 
+      messages: finalMessages,
+      pagination: {
+        hasMore,
+        nextCursor,
+        limit
+      }
     }, { status: 200 });
 
   } catch (error) {

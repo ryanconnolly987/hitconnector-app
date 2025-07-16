@@ -45,7 +45,6 @@ describe('Booking Avatar URL Test', () => {
     // Create test profile with Cloudinary avatar
     const profileData = [{
       id: testUserId,
-      userId: testUserId,
       name: 'Test Artist',
       profileImage: cloudinaryUrl,
       slug: 'test-artist'

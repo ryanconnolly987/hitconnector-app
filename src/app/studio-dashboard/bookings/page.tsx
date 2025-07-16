@@ -416,6 +416,7 @@ export default function BookingsPage() {
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-4">
                         <Avatar>
+                          <AvatarImage src={booking.artistProfilePicture || "/placeholder.svg"} alt={booking.userName} />
                           <AvatarFallback>{booking.userName.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div className="space-y-2">
@@ -591,6 +592,7 @@ export default function BookingsPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <Avatar>
+                          <AvatarImage src={booking.artistProfilePicture || "/placeholder.svg"} alt={booking.userName} />
                           <AvatarFallback>{booking.userName.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div>
@@ -768,6 +770,7 @@ export default function BookingsPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <Avatar>
+                          <AvatarImage src={booking.artistProfilePicture || "/placeholder.svg"} alt={booking.userName} />
                           <AvatarFallback>{booking.userName.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div>

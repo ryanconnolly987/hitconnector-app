@@ -42,6 +42,7 @@ interface BookingDetails {
   approvedAt?: string
   artistSlug?: string
   artistId?: string
+  artistProfilePicture?: string
   engineer?: {
     displayName: string
   }
@@ -149,6 +150,7 @@ export function BookingDetailsModal() {
             {/* Artist Information */}
             <div className="flex items-center gap-3">
               <Avatar>
+                <AvatarImage src={booking.artistProfilePicture || "/placeholder.svg"} alt={booking.userName} />
                 <AvatarFallback>{booking.userName.charAt(0)}</AvatarFallback>
               </Avatar>
               <div>

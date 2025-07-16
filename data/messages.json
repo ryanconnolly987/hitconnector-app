@@ -98,6 +98,16 @@
       "text": "worddd",
       "timestamp": "2025-07-14T23:57:49.883Z",
       "read": false
+    },
+    {
+      "id": "1752638529439om7qpgnz5",
+      "conversationId": "17523813723507uipl787o",
+      "senderId": "user_1752282588234_3wnbsnjw6",
+      "receiverId": "user_1752282648868_83wk66ylh",
+      "text": "yo",
+      "timestamp": "2025-07-16T04:02:09.439Z",
+      "read": false,
+      "type": "text"
     }
   ],
   "conversations": [
@@ -141,7 +151,8 @@
         "text": "hey",
         "timestamp": "2025-07-13T04:26:45.387Z",
         "read": false
-      }
+      },
+      "deletedAt": "2025-07-16T04:01:53.516Z"
     },
     {
       "id": "17523749640946rf0ern9e",
@@ -153,7 +164,8 @@
       "unreadCount": {
         "user_1752282588234_3wnbsnjw6": 0,
         "undefined": 0
-      }
+      },
+      "deletedAt": "2025-07-16T04:01:58.951Z"
     },
     {
       "id": "17523813723507uipl787o",
@@ -161,19 +173,20 @@
         "user_1752282648868_83wk66ylh",
         "user_1752282588234_3wnbsnjw6"
       ],
-      "updatedAt": "2025-07-14T23:57:49.883Z",
+      "updatedAt": "2025-07-16T04:02:09.439Z",
       "unreadCount": {
-        "user_1752282648868_83wk66ylh": 0,
+        "user_1752282648868_83wk66ylh": 1,
         "user_1752282588234_3wnbsnjw6": 5
       },
       "lastMessage": {
-        "id": "1752537469883by4b6g3gb",
+        "id": "1752638529439om7qpgnz5",
         "conversationId": "17523813723507uipl787o",
-        "senderId": "user_1752282648868_83wk66ylh",
-        "receiverId": "user_1752282588234_3wnbsnjw6",
-        "text": "worddd",
-        "timestamp": "2025-07-14T23:57:49.883Z",
-        "read": false
+        "senderId": "user_1752282588234_3wnbsnjw6",
+        "receiverId": "user_1752282648868_83wk66ylh",
+        "text": "yo",
+        "timestamp": "2025-07-16T04:02:09.439Z",
+        "read": false,
+        "type": "text"
       },
       "lastReadAt": {
         "user_1752282648868_83wk66ylh": "2025-07-15T10:46:28.319Z"

@@ -30,15 +30,15 @@ function getUserInfo(userId: string): ArtistBrief | null {
     // Get basic user info
     if (fs.existsSync(USERS_FILE)) {
       const usersData = fs.readFileSync(USERS_FILE, 'utf8');
-      const users = JSON.parse(usersData).users || [];
+      const users = JSON.parse(usersData);
       user = users.find((u: any) => u.id === userId);
     }
 
     // Get profile info for avatar
     if (fs.existsSync(PROFILES_FILE)) {
       const profilesData = fs.readFileSync(PROFILES_FILE, 'utf8');
-      const profiles = JSON.parse(profilesData).profiles || [];
-      profile = profiles.find((p: any) => p.userId === userId);
+      const profiles = JSON.parse(profilesData);
+      profile = profiles.find((p: any) => p.id === userId);
     }
 
     // Return data consistent with artistBriefSelect format

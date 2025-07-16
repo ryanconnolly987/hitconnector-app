@@ -1,9 +1,22 @@
 import Stripe from 'stripe';
 import { loadStripe } from '@stripe/stripe-js';
 
-// Server-side Stripe instance
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-06-30.basil',
+// Validate required environment variables
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+if (!stripeSecretKey) {
+  console.error('❌ STRIPE_SECRET_KEY environment variable is not set');
+  throw new Error('Stripe configuration error: STRIPE_SECRET_KEY is required');
+}
+
+const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+if (!stripePublishableKey) {
+  console.error('❌ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY environment variable is not set');
+  throw new Error('Stripe configuration error: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is required');
+}
+
+// Server-side Stripe instance  
+export const stripe = new Stripe(stripeSecretKey, {
+  apiVersion: '2025-06-30.basil' as any, // Pin to stable version once available
   typescript: true,
 });
 
@@ -12,7 +25,7 @@ let stripePromise: Promise<any> | null = null;
 
 export const getStripe = () => {
   if (!stripePromise) {
-    stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+    stripePromise = loadStripe(stripePublishableKey);
   }
   return stripePromise;
 };
@@ -20,28 +33,26 @@ export const getStripe = () => {
 // Company fee configuration
 export const COMPANY_FEE_PERCENTAGE = parseFloat(process.env.COMPANY_FEE_PERCENTAGE || '3') / 100;
 
-// Helper function to calculate total amount with company fee
-export function calculateTotalWithFee(baseAmount: number): {
-  baseAmount: number;
-  companyFee: number;
-  totalAmount: number;
-} {
-  const companyFee = Math.round(baseAmount * COMPANY_FEE_PERCENTAGE);
-  const totalAmount = baseAmount + companyFee;
-  
-  return {
-    baseAmount,
-    companyFee,
-    totalAmount
-  };
-}
-
-// Helper function to convert dollars to cents for Stripe
+// Helper functions for payment calculations
 export function dollarsToCents(dollars: number): number {
   return Math.round(dollars * 100);
 }
 
-// Helper function to convert cents to dollars for display
 export function centsToDollars(cents: number): number {
   return cents / 100;
+}
+
+export function calculateTotalWithFee(baseAmountCents: number): {
+  baseAmount: number;
+  companyFee: number;
+  totalAmount: number;
+} {
+  const companyFeeCents = Math.round(baseAmountCents * COMPANY_FEE_PERCENTAGE);
+  const totalAmountCents = baseAmountCents + companyFeeCents;
+  
+  return {
+    baseAmount: baseAmountCents,
+    companyFee: companyFeeCents,
+    totalAmount: totalAmountCents,
+  };
 } 

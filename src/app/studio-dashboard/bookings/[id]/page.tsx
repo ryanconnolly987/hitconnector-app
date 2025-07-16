@@ -38,6 +38,7 @@ interface BookingDetails {
   approvedAt?: string
   artistSlug?: string
   artistId?: string
+  artistProfilePicture?: string
 }
 
 export default async function BookingDetailsPage({
@@ -257,6 +258,7 @@ function BookingDetailsPageClient({ bookingId }: { bookingId: string }) {
               <CardContent>
                 <div className="flex items-center gap-4">
                   <Avatar className="h-12 w-12">
+                    <AvatarImage src={booking.artistProfilePicture || "/placeholder.svg"} alt={booking.userName} />
                     <AvatarFallback>{booking.userName.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <div>
