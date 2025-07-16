@@ -22,7 +22,6 @@ interface Conversation {
   lastMessage?: Message;
   updatedAt: string;
   unreadCount: { [userId: string]: number };
-  lastReadAt?: { [userId: string]: string };
   deletedAt?: string;
 }
 
