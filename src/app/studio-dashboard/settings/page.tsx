@@ -400,6 +400,156 @@ export default function SettingsPage() {
     setPasswords({ current: "", new: "", confirm: "" })
   }
 
+  // Payment Method Handlers
+  const handleAddPaymentMethod = async () => {
+    try {
+      setSaving(true)
+      console.log('💳 [Settings] Creating setup intent for studio...')
+
+      // Find studio data to get studioId
+      const studiosResponse = await fetch(`${API_BASE_URL}/api/studios`)
+      if (!studiosResponse.ok) {
+        throw new Error('Failed to fetch studios')
+      }
+
+      const data = await studiosResponse.json()
+      const userStudios = data.studios?.filter((studio: any) => 
+        studio.owner === user?.email || studio.owner === user?.id
+      )
+
+      if (!userStudios || userStudios.length === 0) {
+        throw new Error('Studio not found')
+      }
+
+      const studioId = userStudios[0].id
+
+      // Create setup intent
+      const response = await fetch(`${API_BASE_URL}/api/studios/${studioId}/stripe/payment-methods`, {
+        method: 'POST'
+      })
+
+      if (response.status === 201) {
+        const { clientSecret } = await response.json()
+        
+        // In a real implementation, you would integrate with Stripe Elements here
+        // For now, we'll show a success message and recommend using the /add-card page
+        toast({
+          title: "Setup Intent Created",
+          description: "Visit /add-card to complete payment method setup",
+          variant: "default"
+        })
+      } else if (response.status === 404) {
+        const errorData = await response.json()
+        toast({
+          title: "Studio Not Found",
+          description: "Unable to find your studio account. Please contact support.",
+          variant: "destructive"
+        })
+      } else if (response.status === 500) {
+        const errorData = await response.json()
+        toast({
+          title: "Payment Setup Error",
+          description: errorData.error === 'stripe_setup_intent_failed' 
+            ? "Stripe payment setup failed. Please check your payment configuration."
+            : "Internal server error. Please try again later.",
+          variant: "destructive"
+        })
+      } else {
+        const errorData = await response.json().catch(() => ({}))
+        toast({
+          title: "Setup Failed",
+          description: errorData.message || `Request failed with status ${response.status}`,
+          variant: "destructive"
+        })
+      }
+
+    } catch (error) {
+      console.error('❌ [Settings] Error adding payment method:', error)
+      toast({
+        title: "Error",
+        description: "Failed to add payment method. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleRemovePaymentMethod = async (paymentMethodId: string) => {
+    try {
+      setSaving(true)
+      console.log('🗑️ [Settings] Removing payment method:', paymentMethodId)
+
+      // Find studio data to get studioId
+      const studiosResponse = await fetch(`${API_BASE_URL}/api/studios`)
+      if (!studiosResponse.ok) {
+        throw new Error('Failed to fetch studios')
+      }
+
+      const data = await studiosResponse.json()
+      const userStudios = data.studios?.filter((studio: any) => 
+        studio.owner === user?.email || studio.owner === user?.id
+      )
+
+      if (!userStudios || userStudios.length === 0) {
+        throw new Error('Studio not found')
+      }
+
+      const studioId = userStudios[0].id
+
+      // Remove payment method
+      const response = await fetch(
+        `${API_BASE_URL}/api/studios/${studioId}/stripe/payment-methods/${paymentMethodId}`, 
+        { method: 'DELETE' }
+      )
+
+      if (response.status === 200) {
+        // Refresh billing data
+        const billingResponse = await fetch(`${API_BASE_URL}/api/billing/info?studioId=${studioId}`)
+        if (billingResponse.ok) {
+          const billingData = await billingResponse.json()
+          setBilling(billingData)
+        }
+
+        toast({
+          title: "Payment Method Removed",
+          description: "Payment method has been successfully removed",
+          variant: "default"
+        })
+      } else if (response.status === 404) {
+        toast({
+          title: "Payment Method Not Found",
+          description: "The payment method may have already been removed.",
+          variant: "destructive"
+        })
+      } else if (response.status === 500) {
+        const errorData = await response.json().catch(() => ({}))
+        toast({
+          title: "Removal Failed",
+          description: "Failed to remove payment method. Please try again later.",
+          variant: "destructive"
+        })
+      } else {
+        const errorData = await response.json().catch(() => ({}))
+        toast({
+          title: "Removal Failed",
+          description: errorData.message || `Request failed with status ${response.status}`,
+          variant: "destructive"
+        })
+      }
+
+    } catch (error) {
+      console.error('❌ [Settings] Error removing payment method:', error)
+      toast({
+        title: "Error",
+        description: "Failed to remove payment method. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-muted/40">
@@ -880,54 +1030,47 @@ export default function SettingsPage() {
 
                 <div className="space-y-4">
                   <h4 className="font-medium">Payment Methods</h4>
-                  <div className="rounded-lg border p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <CreditCard className="h-5 w-5" />
-                        <div>
-                          <p className="font-medium">Visa ending in 4242</p>
-                          <p className="text-sm text-muted-foreground">Expires 12/2026</p>
+                  {billing.paymentMethods.length > 0 ? (
+                    billing.paymentMethods.map((pm: any) => (
+                      <div key={pm.id} className="rounded-lg border p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <CreditCard className="h-5 w-5" />
+                            <div>
+                              <p className="font-medium">{pm.brand} ending in {pm.last4}</p>
+                              <p className="text-sm text-muted-foreground">Expires {pm.expMonth}/{pm.expYear}</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleRemovePaymentMethod(pm.id)}
+                              disabled={saving}
+                            >
+                              Remove
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm">Edit</Button>
-                        <Button variant="outline" size="sm">Remove</Button>
-                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-lg border p-4 text-center text-sm text-muted-foreground">
+                      No payment methods added yet
                     </div>
-                  </div>
-                  <Button variant="outline" className="w-full">
+                  )}
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={handleAddPaymentMethod}
+                    disabled={saving}
+                  >
                     <CreditCard className="mr-2 h-4 w-4" />
                     Add Payment Method
                   </Button>
                 </div>
 
-                <Separator />
 
-                <div className="space-y-4">
-                  <h4 className="font-medium">Billing History</h4>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between py-2">
-                      <div>
-                        <p className="font-medium">Dec 15, 2023</p>
-                        <p className="text-sm text-muted-foreground">HitConnector Pro - Monthly</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium">$29.00</p>
-                        <Button variant="ghost" size="sm">Download</Button>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between py-2">
-                      <div>
-                        <p className="font-medium">Nov 15, 2023</p>
-                        <p className="text-sm text-muted-foreground">HitConnector Pro - Monthly</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium">$29.00</p>
-                        <Button variant="ghost" size="sm">Download</Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
 
 {billing.subscription && (
                   <div className="flex justify-between pt-4">

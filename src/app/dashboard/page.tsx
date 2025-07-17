@@ -93,7 +93,7 @@ export default function DashboardPage() {
         console.time('fetchBookings'); // added performance timing
         console.log('🔍 [Dashboard] Fetching bookings for user:', user.id)
         
-        const bookingsResponse = await fetch(`${API_BASE_URL}/api/bookings?userId=${user.id}`)
+        const bookingsResponse = await fetch(`${API_BASE_URL}/api/users/${user.id}/bookings`)
         if (bookingsResponse.ok) {
           const bookingsData = await bookingsResponse.json()
           console.log(`✅ [Dashboard] Found ${bookingsData.bookings?.length || 0} bookings`)
@@ -217,7 +217,7 @@ export default function DashboardPage() {
                 </TabsTrigger>
                 <TabsTrigger value="following" className="flex items-center gap-2">
                   <Heart className="h-4 w-4" />
-                  Following
+                  Network
                 </TabsTrigger>
                 <TabsTrigger value="open-calls" className="flex items-center gap-2">
                   <Megaphone className="h-4 w-4" />
@@ -232,11 +232,13 @@ export default function DashboardPage() {
                       key={booking.id}
                       booking={{
                         id: booking.id,
-                        studioName: booking.studioName,
+                        // Use new studio format if available, fallback to old format
+                        studio: booking.studio || undefined,
+                        studioName: booking.studioName || booking.studio?.name,
                         studioImage: booking.studioImage,
                         date: booking.date,
-                        startTime: booking.startTime,
-                        endTime: booking.endTime,
+                        startTime: booking.startTime || booking.start,
+                        endTime: booking.endTime || booking.end,
                         time: booking.time,
                         location: booking.location,
                         status: booking.status

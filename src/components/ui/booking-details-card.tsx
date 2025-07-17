@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { CalendarDays, Clock, MapPin, X, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react"
 import { useAuth } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
@@ -9,6 +10,7 @@ import { API_BASE_URL } from "@/lib/config"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Dialog,
   DialogContent,
@@ -27,12 +29,20 @@ import {
 interface BookingDetailsCardProps {
   booking: {
     id: string
-    studioName: string
-    studioImage?: string
+    studioName?: string // Keep for backward compatibility
+    studioImage?: string // Keep for backward compatibility
+    studio?: {
+      id: string
+      name: string
+      slug: string
+      avatarUrl: string | null
+    }
     date: string
     time?: string
     startTime?: string
     endTime?: string
+    start?: string // New format
+    end?: string // New format
     location?: string
     status: string
   }
@@ -100,21 +110,38 @@ export function BookingDetailsCard({ booking, onCancel }: BookingDetailsCardProp
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 overflow-hidden rounded-full bg-muted">
-                {booking.studioImage && (
-                  <img
-                    src={booking.studioImage}
-                    alt={booking.studioName}
-                    className="h-full w-full object-cover"
-                  />
-                )}
-              </div>
-              <div>
-                <CardTitle className="text-lg">{booking.studioName}</CardTitle>
-                <Badge variant={booking.status === "confirmed" ? "default" : "outline"}>
-                  {booking.status === "confirmed" ? "Confirmed" : booking.status}
-                </Badge>
-              </div>
+              {booking.studio ? (
+                <Link href={`/studios/${booking.studio.slug}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={booking.studio.avatarUrl || "/placeholder.svg"} alt={booking.studio.name} />
+                    <AvatarFallback>{booking.studio.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <CardTitle className="text-lg hover:underline">{booking.studio.name}</CardTitle>
+                    <Badge variant={booking.status === "confirmed" ? "default" : "outline"}>
+                      {booking.status === "confirmed" ? "Confirmed" : booking.status}
+                    </Badge>
+                  </div>
+                </Link>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 overflow-hidden rounded-full bg-muted">
+                    {booking.studioImage && (
+                      <img
+                        src={booking.studioImage}
+                        alt={booking.studioName}
+                        className="h-full w-full object-cover"
+                      />
+                    )}
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">{booking.studioName}</CardTitle>
+                    <Badge variant={booking.status === "confirmed" ? "default" : "outline"}>
+                      {booking.status === "confirmed" ? "Confirmed" : booking.status}
+                    </Badge>
+                  </div>
+                </div>
+              )}
             </div>
             <CollapsibleTrigger asChild>
               <Button variant="outline" size="sm">

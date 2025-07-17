@@ -12,24 +12,43 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Mock payment methods data - in production would fetch from Stripe
-    const mockPaymentMethods = [
-      {
-        id: 'pm_1234567890',
-        brand: 'Visa',
-        last4: '4242',
-        expMonth: 12,
-        expYear: 2026
-      }
-    ];
+    // Call the new Stripe payment methods API
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? process.env.VERCEL_URL 
+        ? `https://${process.env.VERCEL_URL}`
+        : 'https://your-production-domain.com'
+      : 'http://localhost:3000';
 
-    return NextResponse.json({
-      subscription: null,
-      paymentMethods: mockPaymentMethods
-    });
+    try {
+      const paymentMethodsResponse = await fetch(
+        `${baseUrl}/api/studios/${studioId}/stripe/payment-methods`
+      );
+      
+      let paymentMethods = [];
+      if (paymentMethodsResponse.ok) {
+        const data = await paymentMethodsResponse.json();
+        paymentMethods = data.paymentMethods || [];
+      } else {
+        console.log('⚠️ [Billing Info] Could not fetch payment methods:', paymentMethodsResponse.status);
+      }
+
+      return NextResponse.json({
+        subscription: null, // No subscriptions for now since site is free for studios
+        paymentMethods
+      });
+
+    } catch (fetchError) {
+      console.error('❌ [Billing Info] Error calling payment methods API:', fetchError);
+      
+      // Fallback to empty array if the new API is not available
+      return NextResponse.json({
+        subscription: null,
+        paymentMethods: []
+      });
+    }
 
   } catch (error) {
-    console.error('Error fetching billing info:', error);
+    console.error('❌ [Billing Info] Error fetching billing info:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

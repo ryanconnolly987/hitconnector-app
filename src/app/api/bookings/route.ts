@@ -6,6 +6,7 @@ import { artistBriefSelect, type ArtistBrief } from '@/lib/bookings/activeBookin
 const BOOKINGS_FILE = path.join(process.cwd(), 'data', 'bookings.json');
 const USERS_FILE = path.join(process.cwd(), 'data', 'users.json');
 const PROFILES_FILE = path.join(process.cwd(), 'data', 'user-profiles.json');
+const STUDIOS_FILE = path.join(process.cwd(), 'data', 'studios.json');
 
 // Ensure data directory exists
 function ensureDataDir() {
@@ -46,6 +47,30 @@ function getUserInfo(userId: string): ArtistBrief | null {
     }
   } catch (error) {
     console.error('Error getting user info:', error);
+  }
+  return null;
+}
+
+// Helper function to get studio information
+function getStudioInfo(studioId: string): { id: string; name: string; slug: string; avatarUrl: string | null } | null {
+  try {
+    if (fs.existsSync(STUDIOS_FILE)) {
+      const studiosData = fs.readFileSync(STUDIOS_FILE, 'utf8');
+      const studioDataObj = JSON.parse(studiosData);
+      const studios = studioDataObj.studios || [];
+      
+      const studio = studios.find((s: any) => s.id === studioId);
+      if (studio) {
+        return {
+          id: studio.id,
+          name: studio.name || 'Unknown Studio',
+          slug: studio.slug || studio.id,
+          avatarUrl: studio.profileImage || null
+        };
+      }
+    }
+  } catch (error) {
+    console.error('Error getting studio info:', error);
   }
   return null;
 }
@@ -115,7 +140,26 @@ export async function GET(request: NextRequest) {
          booking.status === 'COMPLETED' || booking.status === 'completed')
       );
       
-      return NextResponse.json({ bookings: filteredBookings }, { status: 200 });
+      // Enhance bookings with studio information for artist dashboard
+      const enhancedBookings = filteredBookings.map(booking => {
+        const studioInfo = getStudioInfo(booking.studioId);
+        return {
+          ...booking,
+          studio: studioInfo ? {
+            id: studioInfo.id,
+            name: studioInfo.name,
+            slug: studioInfo.slug,
+            avatarUrl: studioInfo.avatarUrl
+          } : {
+            id: booking.studioId,
+            name: booking.studioName || 'Unknown Studio',
+            slug: booking.studioId,
+            avatarUrl: null
+          }
+        };
+      });
+      
+      return NextResponse.json({ bookings: enhancedBookings }, { status: 200 });
     } else {
       // Fallback for general requests - return all bookings without CANCELED filter
       const bookings = getBookings();
