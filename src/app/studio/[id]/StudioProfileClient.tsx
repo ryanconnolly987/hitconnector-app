@@ -211,10 +211,6 @@ export default function StudioProfileClient({
                 <div className="flex-1">
                   <h1 className="text-3xl font-bold mb-2">{studio.name}</h1>
                   <div className="flex items-center gap-4 text-muted-foreground mb-2">
-                    <div className="flex items-center gap-1">
-                      <MapPin className="h-4 w-4" />
-                      <span>{studio.location || studio.address || "Location not specified"}</span>
-                    </div>
                     {studio.rating > 0 && (
                       <div className="flex items-center gap-1">
                         <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
@@ -223,14 +219,12 @@ export default function StudioProfileClient({
                     )}
                   </div>
                   <div className="flex items-center gap-4 mb-2">
+                    <div className="flex items-center gap-1">
+                      <MapPin className="h-4 w-4" />
+                      <span>{studio.location || studio.address || "Location not specified"}</span>
+                    </div>
                     <FollowStats targetId={String(studio.id)} />
                   </div>
-                  {studio.minRoomRate && studio.maxRoomRate && (
-                    <div className="flex items-center gap-1">
-                      <DollarSign className="h-4 w-4" />
-                      <span className="font-medium">${studio.minRoomRate} – ${studio.maxRoomRate}/hr</span>
-                    </div>
-                  )}
                 </div>
               </div>
               <div className="flex gap-2">
@@ -409,19 +403,7 @@ export default function StudioProfileClient({
                         <span>{studio.email}</span>
                       </div>
                     )}
-                    {studio.website && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground">Website:</span>
-                        <a 
-                          href={studio.website.startsWith('http') ? studio.website : `https://${studio.website}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline"
-                        >
-                          {studio.website}
-                        </a>
-                      </div>
-                    )}
+
                   </CardContent>
                 </Card>
               </div>

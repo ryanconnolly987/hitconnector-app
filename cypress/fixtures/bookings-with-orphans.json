@@ -1,0 +1,66 @@
+{
+  "bookings": [
+    {
+      "id": "booking_valid_1",
+      "studioId": "studio_1",
+      "studioName": "Test Studio",
+      "userId": "user_1",
+      "userName": "Valid User",
+      "userEmail": "valid@test.com",
+      "date": "2025-07-20",
+      "startTime": "10:00",
+      "endTime": "12:00",
+      "duration": 2,
+      "totalCost": 100,
+      "status": "confirmed",
+      "createdAt": "2025-07-15T10:00:00Z"
+    },
+    {
+      "id": "booking_orphan_1",
+      "studioId": "invalid_studio",
+      "studioName": "Ghost Studio",
+      "userId": "invalid_user",
+      "userName": "Ghost User",
+      "userEmail": "ghost@test.com",
+      "date": "2025-07-14",
+      "startTime": "20:00",
+      "endTime": "22:00",
+      "duration": 2,
+      "totalCost": 80,
+      "status": "completed",
+      "createdAt": "2025-07-14T04:09:59Z"
+    },
+    {
+      "id": "booking_valid_2",
+      "studioId": "studio_1",
+      "studioName": "Test Studio",
+      "userId": "user_1",
+      "userName": "Valid User",
+      "userEmail": "valid@test.com",
+      "date": "2025-07-21",
+      "startTime": "14:00",
+      "endTime": "16:00",
+      "duration": 2,
+      "totalCost": 120,
+      "status": "confirmed",
+      "createdAt": "2025-07-16T10:00:00Z",
+      "engineerPreference": "OJack",
+      "staffName": "OJack"
+    },
+    {
+      "id": "booking_orphan_2",
+      "studioId": "studio_1",
+      "studioName": "Test Studio",
+      "userId": "invalid_user_2",
+      "userName": "",
+      "userEmail": "",
+      "date": "2025-07-14",
+      "startTime": "20:00",
+      "endTime": "22:00",
+      "duration": 2,
+      "totalCost": 80,
+      "status": "completed",
+      "createdAt": "2025-07-14T05:37:34Z"
+    }
+  ]
+} 

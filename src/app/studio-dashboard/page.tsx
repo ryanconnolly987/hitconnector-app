@@ -46,6 +46,7 @@ import {
   SidebarProvider,
   SidebarInset,
 } from "@/components/ui/sidebar"
+import { CollapsibleSidebar } from "@/components/CollapsibleSidebar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
@@ -375,10 +376,9 @@ export default function StudioDashboardPage() {
 
   return (
     <BookingDetailsProvider>
-      <SidebarProvider>
-        <div className="flex min-h-screen bg-muted/40">
+      <div className="flex min-h-screen bg-muted/40">
         <StudioDashboardSidebar studio={studioData} />
-        <SidebarInset>
+        <main className="flex-1">
           <div className="flex-1 space-y-6 p-6 md:p-8">
             <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -752,67 +752,61 @@ export default function StudioDashboardPage() {
               </TabsContent>
             </Tabs>
           </div>
-        </SidebarInset>
+        </main>
       </div>
-    </SidebarProvider>
-    <BookingDetailsModal />
+      <BookingDetailsModal />
     </BookingDetailsProvider>
   )
 }
 
 function StudioDashboardSidebar({ studio }: { studio: { name: string; avatar: string; email: string; profileImage?: string; firstName?: string; lastName?: string } }) {
   return (
-    <Sidebar>
-      <SidebarHeader>
+    <CollapsibleSidebar>
+      <div className="mb-4">
         <Link href="/" className="flex items-center gap-2 font-semibold">
           <span className="text-xl font-bold">HitConnector</span>
         </Link>
-      </SidebarHeader>
-      <SidebarContent>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive>
-              <Link href="/studio-dashboard">
-                <LayoutDashboard className="h-4 w-4" />
-                <span>Dashboard</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <Link href="/studio-dashboard/profile">
-                <Users className="h-4 w-4" />
-                <span>My Studio Profile</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <Link href="/studio-dashboard/bookings">
-                <BookOpen className="h-4 w-4" />
-                <span>Bookings</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <Link href="/messages">
-                <MessageSquare className="h-4 w-4" />
-                <span>Messages</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <Link href="/studio-dashboard/settings">
-                <Settings className="h-4 w-4" />
-                <span>Account Settings</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarContent>
-      <SidebarFooter>
+      </div>
+      
+      <div className="flex flex-col gap-2">
+        <Link 
+          href="/studio-dashboard" 
+          className="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary font-medium"
+        >
+          <LayoutDashboard className="h-4 w-4" />
+          <span>Dashboard</span>
+        </Link>
+        <Link 
+          href="/studio-dashboard/profile" 
+          className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors"
+        >
+          <Users className="h-4 w-4" />
+          <span>My Studio Profile</span>
+        </Link>
+        <Link 
+          href="/studio-dashboard/bookings" 
+          className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors"
+        >
+          <BookOpen className="h-4 w-4" />
+          <span>Bookings</span>
+        </Link>
+        <Link 
+          href="/messages" 
+          className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors"
+        >
+          <MessageSquare className="h-4 w-4" />
+          <span>Messages</span>
+        </Link>
+        <Link 
+          href="/studio-dashboard/settings" 
+          className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors"
+        >
+          <Settings className="h-4 w-4" />
+          <span>Account Settings</span>
+        </Link>
+      </div>
+
+      <div className="mt-auto pt-4 border-t">
         <div className="flex items-center gap-4">
           <Avatar>
             <AvatarImage src={studio.profileImage || studio.avatar || "/placeholder.svg"} alt={studio.name} />
@@ -823,7 +817,7 @@ function StudioDashboardSidebar({ studio }: { studio: { name: string; avatar: st
             <span className="text-xs text-muted-foreground">{studio.email}</span>
           </div>
         </div>
-      </SidebarFooter>
-    </Sidebar>
+      </div>
+    </CollapsibleSidebar>
   )
 }

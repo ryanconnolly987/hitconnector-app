@@ -101,7 +101,6 @@ function StudioProfileContent() {
     address: "",
     phone: "",
     email: "",
-    website: "",
     profileImage: "",
     coverImage: "",
     description: "",
@@ -131,7 +130,6 @@ function StudioProfileContent() {
     address: "",
     phone: "",
     email: "",
-    website: "",
     profileImage: "",
     coverImage: "",
     description: "",
@@ -232,7 +230,6 @@ function StudioProfileContent() {
               address: studio.address || "",
               phone: studio.phone || "",
               email: studio.email || "",
-              website: studio.website || "",
               profileImage: studio.profileImage || "",
               coverImage: studio.coverImage || "",
               description: studio.description || "",
@@ -772,7 +769,6 @@ function StudioProfileContent() {
         address: studioData.address,
         phone: studioData.phone,
         email: studioData.email,
-        website: studioData.website,
         profileImage: studioData.profileImage,
         coverImage: studioData.coverImage,
         description: studioData.description,
@@ -913,7 +909,6 @@ function StudioProfileContent() {
             address: studioData.address,
             phone: studioData.phone,
             email: studioData.email,
-            website: studioData.website,
             description: studioData.description,
             hourlyRate: studioData.hourlyRate,
             amenities: studioData.amenities,
@@ -1002,36 +997,7 @@ function StudioProfileContent() {
     }
   }
 
-  const testImagePersistence = async () => {
-    console.log('🧪 [Test] Testing image persistence...')
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/studios`)
-      if (response.ok) {
-        const data = await response.json()
-        const userStudios = data.studios?.filter((studio: any) => 
-          studio.owner === user?.email || studio.owner === user?.id
-        )
-        
-        if (userStudios && userStudios.length > 0) {
-          const studio = userStudios[0]
-          console.log('🔍 [Test] Current studio data in API:', {
-            name: studio.name,
-            profileImage: studio.profileImage ? `${studio.profileImage.substring(0, 50)}...` : 'Not set',
-            coverImage: studio.coverImage ? `${studio.coverImage.substring(0, 50)}...` : 'Not set',
-            galleryCount: studio.gallery?.length || 0
-          })
-          
-          toast({
-            title: "Image Persistence Test",
-            description: `Profile: ${studio.profileImage ? '✅ Saved' : '❌ Missing'}, Cover: ${studio.coverImage ? '✅ Saved' : '❌ Missing'}, Gallery: ${studio.gallery?.length || 0} images`,
-            variant: "default",
-          })
-        }
-      }
-    } catch (error) {
-      console.error('❌ [Test] Error testing persistence:', error)
-    }
-  }
+
 
   return (
     <div className="min-h-screen bg-muted/40">
@@ -1047,13 +1013,6 @@ function StudioProfileContent() {
             <p className="text-muted-foreground">Manage your studio information and settings</p>
           </div>
           <div className="ml-auto flex gap-2">
-            {/* Test button for debugging */}
-            {process.env.NODE_ENV === 'development' && (
-              <Button variant="ghost" size="sm" onClick={testImagePersistence}>
-                Test Images
-              </Button>
-            )}
-            
             <Button variant="outline" asChild>
               <Link href="/studio-profile">View Public Profile</Link>
             </Button>
@@ -1137,14 +1096,6 @@ function StudioProfileContent() {
                       type="email"
                       value={studioData.email}
                       onChange={(e) => setStudioData(prev => ({ ...prev, email: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="website">Website</Label>
-                    <Input
-                      id="website"
-                      value={studioData.website}
-                      onChange={(e) => setStudioData(prev => ({ ...prev, website: e.target.value }))}
                     />
                   </div>
                 </div>

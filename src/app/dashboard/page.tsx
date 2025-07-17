@@ -43,6 +43,7 @@ import {
   SidebarProvider,
   SidebarInset,
 } from "@/components/ui/sidebar"
+import { CollapsibleSidebar } from "@/components/CollapsibleSidebar"
 import { Input } from "@/components/ui/input"
 
 interface DashboardSidebarProps {
@@ -172,15 +173,14 @@ export default function DashboardPage() {
   }, [user?.id]) // added proper dependency array to prevent rerender loop
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen bg-muted/40">
-        <DashboardSidebar 
-          userName={userName} 
-          userEmail={userEmail} 
-          userInitials={userInitials}
-          profileImage={artistProfile.profileImage || user?.avatar}
-        />
-        <SidebarInset>
+    <div className="flex min-h-screen bg-muted/40">
+      <DashboardSidebar 
+        userName={userName} 
+        userEmail={userEmail} 
+        userInitials={userInitials}
+        profileImage={artistProfile.profileImage || user?.avatar}
+      />
+      <main className="flex-1">
           <div className="flex-1 space-y-6 p-6 md:p-8">
             <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -486,57 +486,52 @@ export default function DashboardPage() {
               </TabsContent>
             </Tabs>
           </div>
-        </SidebarInset>
+        </main>
       </div>
-    </SidebarProvider>
-  )
+    )
 }
 
 function DashboardSidebar({ userName, userEmail, userInitials, profileImage }: DashboardSidebarProps) {
   return (
-    <Sidebar>
-      <SidebarHeader>
+    <CollapsibleSidebar>
+      <div className="mb-4">
         <Link href="/" className="flex items-center gap-2 font-semibold">
           <span className="text-xl font-bold">HitConnector</span>
         </Link>
-      </SidebarHeader>
-      <SidebarContent>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive>
-              <Link href="/dashboard">
-                <CalendarDays className="h-4 w-4" />
-                <span>Dashboard</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <Link href="/find-studios">
-                <Search className="h-4 w-4" />
-                <span>Find Studios</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <Link href="/messages">
-                <MessageSquare className="h-4 w-4" />
-                <span>Messages</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <Link href="/settings">
-                <Settings className="h-4 w-4" />
-                <span>Account Settings</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarContent>
-      <SidebarFooter>
+      </div>
+      
+      <div className="flex flex-col gap-2">
+        <Link 
+          href="/dashboard" 
+          className="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary font-medium"
+        >
+          <CalendarDays className="h-4 w-4" />
+          <span>Dashboard</span>
+        </Link>
+        <Link 
+          href="/find-studios" 
+          className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors"
+        >
+          <Search className="h-4 w-4" />
+          <span>Find Studios</span>
+        </Link>
+        <Link 
+          href="/messages" 
+          className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors"
+        >
+          <MessageSquare className="h-4 w-4" />
+          <span>Messages</span>
+        </Link>
+        <Link 
+          href="/settings" 
+          className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors"
+        >
+          <Settings className="h-4 w-4" />
+          <span>Account Settings</span>
+        </Link>
+      </div>
+
+      <div className="mt-auto pt-4 border-t">
         <div className="flex items-center gap-4">
           <Avatar>
             <AvatarImage src={profileImage || "/placeholder.svg?height=40&width=40"} alt={userName} />
@@ -547,7 +542,7 @@ function DashboardSidebar({ userName, userEmail, userInitials, profileImage }: D
             <span className="text-xs text-muted-foreground">{userEmail}</span>
           </div>
         </div>
-      </SidebarFooter>
-    </Sidebar>
+      </div>
+    </CollapsibleSidebar>
   )
 }

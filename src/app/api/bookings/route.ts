@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { artistBriefSelect, type ArtistBrief } from '@/lib/bookings/activeBookings';
+import { filterValidBookings } from '@/lib/bookings/safetyGuards';
 
 const BOOKINGS_FILE = path.join(process.cwd(), 'data', 'bookings.json');
 const USERS_FILE = path.join(process.cwd(), 'data', 'users.json');
@@ -75,7 +76,7 @@ function getStudioInfo(studioId: string): { id: string; name: string; slug: stri
   return null;
 }
 
-// Read bookings from file
+// Read bookings from file with safety guards
 function getBookings(): any[] {
   ensureDataDir();
   try {
@@ -85,7 +86,10 @@ function getBookings(): any[] {
     }
     const data = fs.readFileSync(BOOKINGS_FILE, 'utf8');
     const parsed = JSON.parse(data);
-    return parsed.bookings || [];
+    const rawBookings = parsed.bookings || [];
+    
+    // Apply safety guards to filter out orphaned records
+    return filterValidBookings(rawBookings);
   } catch (error) {
     console.error('Error reading bookings file:', error);
     return [];

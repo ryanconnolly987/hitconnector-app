@@ -43,6 +43,8 @@ interface BookingDetails {
   artistSlug?: string
   artistId?: string
   artistProfilePicture?: string
+  engineerPreference?: string
+  staffName?: string
   engineer?: {
     displayName: string
   }
@@ -90,23 +92,23 @@ export function BookingDetailsModal() {
 
     setActionLoading(true)
     try {
-      const response = await fetch(`${API_BASE_URL}/api/bookings/${booking.id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/bookings/${booking.id}/cancel`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          status: 'cancelled',
-          userId: user.id
-        }),
       })
 
       if (response.ok) {
+        const result = await response.json()
         toast({
           title: "Booking Cancelled",
           description: "The booking has been successfully cancelled.",
         })
-        close()
+        // Update local booking state to reflect cancellation
+        setBooking(prev => prev ? { ...prev, status: 'cancelled' } : null)
+        // Close modal after a brief delay to show the updated status
+        setTimeout(() => close(), 1000)
       } else {
         const error = await response.json()
         toast({
@@ -183,10 +185,10 @@ export function BookingDetailsModal() {
                 <Label>Duration</Label>
                 <p>{booking.duration} hours</p>
               </div>
-              {booking.engineer && (
+              {(booking.engineerPreference || booking.staffName || booking.engineer?.displayName) && (
                 <div>
                   <Label>Engineer Preference</Label>
-                  <p>{booking.engineer.displayName}</p>
+                  <p>{booking.engineerPreference || booking.staffName || booking.engineer?.displayName}</p>
                 </div>
               )}
               <div>

@@ -8,9 +8,11 @@ import { Search, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
+import HowItWorksModal from "@/components/HowItWorksModal"
 
 export default function HomePage() {
   const [search, setSearch] = useState('')
+  const [openModal, setOpenModal] = useState(false)
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -20,9 +22,12 @@ export default function HomePage() {
             <span className="text-xl font-bold">HitConnector</span>
           </Link>
           <nav className="hidden md:flex gap-6">
-            <Link href="/how-it-works" className="text-sm font-medium hover:underline underline-offset-4">
+            <button
+              onClick={() => setOpenModal(true)}
+              className="text-sm font-medium hover:underline underline-offset-4"
+            >
               How It Works
-            </Link>
+            </button>
             <Link href="/login" className="text-sm font-medium hover:underline underline-offset-4">
               Log In
             </Link>
@@ -140,7 +145,7 @@ export default function HomePage() {
                     <Link href="/signup">Get Started</Link>
                   </Button>
                   <Button variant="outline" size="lg" asChild>
-                    <Link href="/how-it-works">Learn More</Link>
+                    <Link href="/learn-more">Learn More</Link>
                   </Button>
                 </div>
               </div>
@@ -173,6 +178,7 @@ export default function HomePage() {
           </nav>
         </div>
       </footer>
+      <HowItWorksModal open={openModal} onOpenChange={setOpenModal} />
     </div>
   )
 }

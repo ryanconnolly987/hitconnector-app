@@ -25,7 +25,6 @@ export default function StudioProfilePage() {
     address: "",
     phone: "",
     email: "",
-    website: "",
     profileImage: "",
     coverImage: "",
     rating: 0,
@@ -111,7 +110,6 @@ export default function StudioProfilePage() {
             address: studio.address || studio.location || "",
             phone: studio.phone || "",
             email: studio.email || "",
-            website: studio.website || "",
             profileImage: studio.profileImage || "",
             coverImage: studio.coverImage || "",
             description: studio.description || "",
@@ -270,10 +268,6 @@ export default function StudioProfilePage() {
                 <div className="flex-1">
                   <h1 className="text-3xl font-bold mb-2">{studioData.name}</h1>
                   <div className="flex items-center gap-4 text-muted-foreground mb-2">
-                    <div className="flex items-center gap-1">
-                      <MapPin className="h-4 w-4" />
-                      <span>{studioData.address || "Location not specified"}</span>
-                    </div>
                     {studioData.rating > 0 && (
                       <div className="flex items-center gap-1">
                         <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
@@ -282,14 +276,12 @@ export default function StudioProfilePage() {
                     )}
                   </div>
                   <div className="flex items-center gap-4 mb-2">
+                    <div className="flex items-center gap-1">
+                      <MapPin className="h-4 w-4" />
+                      <span>{studioData.address || "Location not specified"}</span>
+                    </div>
                     <FollowStats targetId={String(studioData.id)} />
                   </div>
-                  {studioData.hourlyRate > 0 && (
-                    <div className="flex items-center gap-1">
-                      <DollarSign className="h-4 w-4" />
-                      <span className="font-medium">${studioData.hourlyRate}/hour</span>
-                    </div>
-                  )}
                 </div>
               </div>
               <div className="flex gap-2">
@@ -389,14 +381,7 @@ export default function StudioProfilePage() {
                         <div className="text-muted-foreground">{studioData.email}</div>
                       </div>
                     )}
-                    {studioData.website && (
-                      <div>
-                        <div className="font-medium">Website</div>
-                        <a href={studioData.website} className="text-blue-600 hover:underline">
-                          {studioData.website}
-                        </a>
-                      </div>
-                    )}
+
                   </CardContent>
                 </Card>
 
