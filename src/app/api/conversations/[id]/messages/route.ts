@@ -45,7 +45,7 @@ interface UserProfile {
 }
 
 // Helper function to get user info with profile data
-function getUserInfo(userId: string): { id: string; name: string; email: string; role: string; profileImage?: string; type?: string } | null {
+function getUserInfo(userId: string): { id: string; name: string; email: string; role: string; profileImage?: string; slug?: string; type?: string } | null {
   try {
     // Get basic user info
     let users: User[] = [];
@@ -83,6 +83,7 @@ function getUserInfo(userId: string): { id: string; name: string; email: string;
               email: user.email,
               role: user.role,
               profileImage: studio.profileImage || profile?.profileImage,
+              slug: studio.slug,
               type: 'studio'
             };
           }
@@ -198,9 +199,8 @@ export async function GET(
     const hasMore = sortedMessages.length > limit;
     const messages = hasMore ? sortedMessages.slice(0, limit) : sortedMessages;
 
-    // Reverse to show oldest first in UI (Instagram style)
+    // Keep newest first order for UI
     const finalMessages = messages
-      .reverse()
       .map(message => {
         const senderInfo = getUserInfo(message.senderId);
         return {
@@ -232,8 +232,8 @@ export async function GET(
       participantsInfo
     };
 
-    // Cursor for next page (timestamp of oldest message in current page)
-    const nextCursor = finalMessages.length > 0 ? finalMessages[0].timestamp : null;
+    // Cursor for next page (timestamp of oldest message in current page - last in array since newest first)
+    const nextCursor = finalMessages.length > 0 ? finalMessages[finalMessages.length - 1].timestamp : null;
 
     return NextResponse.json({ 
       conversation: conversationWithInfo,

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,6 +26,8 @@ export default function ArtistProfileClient({
 }) {
   const { user } = useAuth()
   const { toast } = useToast()
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -140,15 +143,23 @@ export default function ArtistProfileClient({
         <div className="absolute inset-0 bg-black/20" />
         
         {/* Back Button */}
-        {backHref && (
-          <Link
-            href={backHref}
-            className="absolute top-4 left-4 flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 text-sm font-medium shadow hover:bg-white z-10"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Link>
-        )}
+        <Button
+          onClick={() => {
+            const returnTo = searchParams.get('returnTo')
+            if (returnTo) {
+              router.push(returnTo)
+            } else if (backHref) {
+              router.push(backHref)
+            } else {
+              router.back()
+            }
+          }}
+          className="absolute top-4 left-4 flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 text-sm font-medium shadow hover:bg-white z-10 text-foreground hover:bg-white"
+          variant="ghost"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </Button>
       </div>
 
       {/* Profile Header */}

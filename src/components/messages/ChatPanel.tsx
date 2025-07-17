@@ -85,16 +85,19 @@ export function ChatPanel({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // Reverse messages to show oldest at top, newest at bottom (API returns newest first)
+  const displayMessages = [...messages].reverse();
+
   // Scroll to bottom on conversation load or when new message arrives
   useEffect(() => {
-    if (conversation && messages.length > 0) {
+    if (conversation && displayMessages.length > 0) {
       scrollToBottomIfNearBottom();
     }
-  }, [messages, conversation]);
+  }, [displayMessages, conversation]);
 
   // Scroll to bottom when conversation first loads
   useEffect(() => {
-    if (conversation && messages.length > 0) {
+    if (conversation && displayMessages.length > 0) {
       // Always scroll to bottom when conversation first loads
       scrollToBottom();
     }
@@ -252,7 +255,7 @@ export function ChatPanel({
 
       {/* Messages Area */}
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-1">
-        {messages.length === 0 ? (
+        {displayMessages.length === 0 ? (
           <div className="flex items-center justify-center h-full text-center text-muted-foreground">
             <div>
               <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -262,10 +265,10 @@ export function ChatPanel({
           </div>
         ) : (
           <>
-            {messages.map((message, index) => {
+            {displayMessages.map((message, index) => {
               const isFromCurrentUser = message.senderId === currentUserId;
-              const previousMessage = index > 0 ? messages[index - 1] : undefined;
-              const nextMessage = index < messages.length - 1 ? messages[index + 1] : undefined;
+              const previousMessage = index > 0 ? displayMessages[index - 1] : undefined;
+              const nextMessage = index < displayMessages.length - 1 ? displayMessages[index + 1] : undefined;
               const showDateSeparator = shouldShowDateSeparator(message, previousMessage);
               const showAvatar = shouldShowAvatar(message, nextMessage);
               const senderInfo = getSenderInfo(message);

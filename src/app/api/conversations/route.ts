@@ -49,7 +49,7 @@ function generateId(): string {
 }
 
 // Helper function to get user info with profile data
-function getUserInfo(userId: string): { id: string; name: string; email: string; role: string; profileImage?: string; type?: string } | null {
+function getUserInfo(userId: string): { id: string; name: string; email: string; role: string; profileImage?: string; slug?: string; type?: string } | null {
   try {
     // Get basic user info
     let users: User[] = [];
@@ -87,6 +87,7 @@ function getUserInfo(userId: string): { id: string; name: string; email: string;
               email: user.email,
               role: user.role,
               profileImage: studio.profileImage || profile?.profileImage,
+              slug: studio.slug,
               type: 'studio'
             };
           }

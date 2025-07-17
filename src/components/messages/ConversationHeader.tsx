@@ -20,6 +20,8 @@ interface UserInfo {
   email: string;
   role: string;
   profileImage?: string;
+  slug?: string;
+  type?: string;
 }
 
 interface Conversation {
@@ -93,9 +95,17 @@ export function ConversationHeader({
         )}
         
         {/* Avatar and name as clickable link to profile */}
-        {otherParticipant && buildArtistProfileHref(otherParticipant) ? (
+        {otherParticipant && (
+          otherParticipant.type === 'studio' && otherParticipant.slug
+            ? `/studios/${otherParticipant.slug}`
+            : buildArtistProfileHref(otherParticipant)
+        ) ? (
           <Link
-            href={buildArtistProfileHref(otherParticipant)!}
+            href={
+              otherParticipant.type === 'studio' && otherParticipant.slug
+                ? `/studios/${otherParticipant.slug}`
+                : buildArtistProfileHref(otherParticipant)!
+            }
             className="flex items-center space-x-3 hover:underline"
           >
             <Avatar className="h-10 w-10">

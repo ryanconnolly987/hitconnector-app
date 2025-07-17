@@ -32,5 +32,5 @@ export default async function ArtistProfilePage({
   // In a real app, you'd use getServerSession() or similar
   const isOwner = false
 
-  return <ArtistProfileClient profile={profile} isOwner={isOwner} backHref="/studio-dashboard" />
+  return <ArtistProfileClient profile={profile} isOwner={isOwner} />
 } 

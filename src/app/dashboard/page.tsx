@@ -328,7 +328,7 @@ export default function DashboardPage() {
                           </Link>
                         </Button>
                         <Button variant="outline" asChild className="w-full mt-2">
-                          <Link href={`/artist/${user?.slug || user?.id}`}>
+                          <Link href={`/artist/${user?.slug || user?.id}?returnTo=/dashboard`}>
                             <User className="mr-2 h-4 w-4" />
                             View Public Profile
                           </Link>
