@@ -200,17 +200,6 @@ export default function FindStudiosPage() {
           <p className="text-muted-foreground">
             Discover professional recording studios in your area
           </p>
-          {/* Debug test button */}
-          <Button 
-            onClick={fetchStudios} 
-            variant="outline" 
-            className="mt-4"
-          >
-            🔄 Test API Call (Debug)
-          </Button>
-          <div className="mt-2 text-sm text-muted-foreground">
-            Studios loaded: {studios.length} | Loading: {loading.toString()} | Error: {error || 'none'}
-          </div>
         </div>
 
         {/* Search and Filters */}
@@ -225,9 +214,6 @@ export default function FindStudiosPage() {
                 className="pl-10"
               />
             </div>
-            <Button variant="outline" size="icon">
-              <Filter className="h-4 w-4" />
-            </Button>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4">

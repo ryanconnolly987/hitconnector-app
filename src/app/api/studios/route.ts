@@ -67,7 +67,18 @@ function saveStudios(studios: any[]): void {
 
 export async function GET(request: NextRequest) {
   try {
-    const studios = getStudios();
+    const allStudios = getStudios();
+    
+    // Deduplicate studios by slug, keeping the most recently updated version
+    const studioMap = new Map();
+    for (const studio of allStudios) {
+      const existingStudio = studioMap.get(studio.slug);
+      if (!existingStudio || new Date(studio.updatedAt || studio.createdAt) > new Date(existingStudio.updatedAt || existingStudio.createdAt)) {
+        studioMap.set(studio.slug, studio);
+      }
+    }
+    
+    const studios = Array.from(studioMap.values());
     return NextResponse.json({ studios }, { status: 200 });
   } catch (error) {
     console.error('GET studios error:', error);
